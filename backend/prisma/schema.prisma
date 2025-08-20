@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  LIBRARIAN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum BookStatus {
+  AVAILABLE
+  BORROWED
+  RESERVED
+  MAINTENANCE
+  PENDING_RETURN
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+  PENDING_RETURN
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  FINE
+  RESERVATION_AVAILABLE
+}
+
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  AWAITING_PICKUP
+  FULFILLED
+  EXPIRED
+  CANCELLED
+}
+
+model User {
+  id             String           @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String           @unique
+  password       String
+  role           Role             @default(USER)
+  status         UserStatus       @default(ACTIVE)
+  profilePicture String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  loans          Loan[]
+  reservations   Reservation[]
+  comments       BookComment[]
+  suggestions    BookSuggestion[]
+  notifications  Notification[]
+  fines          Fine[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  books       Book[]
+
+  @@map("categories")
+}
+
+model Book {
+  id            String        @id @default(uuid())
+  title         String
+  author        String
+  description   String?       @db.Text
+  isbn          String?       @unique
+  publisher     String?
+  publishedYear Int?
+  pageCount     Int?
+  coverImage    String?
+  status        BookStatus    @default(AVAILABLE)
+  categoryId    String
+  category      Category      @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  loans         Loan[]
+  reservations  Reservation[]
+  comments      BookComment[]
+
+  @@index([title, author])
+  @@map("books")
+}
+
+model Loan {
+  id               String     @id @default(uuid())
+  borrowedAt       DateTime   @default(now())
+  dueDate          DateTime
+  returnedAt       DateTime?
+  status           LoanStatus @default(ACTIVE)
+  renewalRequested Boolean    @default(false)
+  bookId           String
+  book             Book       @relation(fields: [bookId], references: [id])
+  userId           String
+  user             User       @relation(fields: [userId], references: [id])
+  fine             Fine?
+
+  @@map("loans")
+}
+
+model Reservation {
+  id         String            @id @default(uuid())
+  reservedAt DateTime          @default(now())
+  expiresAt  DateTime?
+  status     ReservationStatus @default(ACTIVE)
+
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([bookId, userId], name: "unique_user_book_reservation")
+  @@map("reservations")
+}
+
+model Fine {
+  id        String    @id @default(uuid())
+  amount    Decimal   @db.Decimal(10, 2)
+  reason    String
+  isPaid    Boolean   @default(false)
+  paidAt    DateTime?
+  loanId    String    @unique
+  loan      Loan      @relation(fields: [loanId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("fines")
+}
+
+model BookComment {
+  id        String   @id @default(uuid())
+  comment   String   @db.Text
+  rating    Int?
+  createdAt DateTime @default(now())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("book_comments")
+}
+
+model BookSuggestion {
+  id        String           @id @default(uuid())
+  title     String
+  author    String?
+  note      String?
+  status    SuggestionStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@map("book_suggestions")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  link      String?
+
+  @@map("notifications")
+}

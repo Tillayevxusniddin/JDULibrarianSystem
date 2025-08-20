@@ -1,0 +1,79 @@
+import { Request, Response } from 'express';
+import asyncHandler from 'express-async-handler';
+import * as authService from './auth.service.js';
+import ApiError from '../../utils/ApiError.js';
+
+export const registerUserHandler = async (req: Request, res: Response) => {
+  try {
+    const user = await authService.createUser(req.body);
+    return res.status(201).json({
+      message: 'User created successfully',
+      data: user,
+    });
+  } catch (error: any) {
+    return res.status(409).json({ message: error.message });
+  }
+};
+
+export const loginUserHandler = async (req: Request, res: Response) => {
+  try {
+    const token = await authService.loginUser(req.body);
+    return res.status(200).json({
+      message: 'Login successful',
+      token,
+    });
+  } catch (error: any) {
+    return res.status(401).json({ message: error.message });
+  }
+};
+
+export const getMeHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userProfile = await authService.getProfile(req.user!.id);
+    res.status(200).json(userProfile);
+  },
+);
+
+export const updateProfileHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const updatedUser = await authService.updateProfile(
+      userId,
+      req.validatedData!.body,
+    );
+    res
+      .status(200)
+      .json({ message: 'Profile updated successfully', data: updatedUser });
+  },
+);
+
+export const changePasswordHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    await authService.changePassword(userId, req.validatedData!.body);
+    res.status(200).json({ message: 'Password changed successfully.' });
+  },
+);
+
+export const updateProfilePictureHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new ApiError(400, 'Rasm yuklanmadi.');
+    }
+
+    const userId = req.user!.id;
+    // Fayl yo'lini to'g'ri formatga keltiramiz (masalan: /uploads/avatars/user-123.jpg)
+    const filePath =
+      '/' + req.file.path.replace(/\\/g, '/').replace('public/', '');
+
+    const updatedUser = await authService.updateProfilePicture(
+      userId,
+      filePath,
+    );
+
+    res.status(200).json({
+      message: 'Profil rasmi muvaffaqiyatli yangilandi',
+      data: updatedUser,
+    });
+  },
+);

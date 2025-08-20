@@ -1,0 +1,13 @@
+# Development
+node_modules/
+dist/
+.env
+public/uploads
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS 
+.DS_Store
