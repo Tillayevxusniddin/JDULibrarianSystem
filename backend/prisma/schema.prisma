@@ -146,8 +146,8 @@ model Fine {
   reason    String
   isPaid    Boolean   @default(false)
   paidAt    DateTime?
-  loanId    String    @unique
-  loan      Loan      @relation(fields: [loanId], references: [id])
+  loanId    String?   @unique
+  loan      Loan?     @relation(fields: [loanId], references: [id])
   userId    String
   user      User      @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())

@@ -17,7 +17,8 @@ import AllLoansPage from '../pages/librarian/AllLoansPage';
 import ProfilePage from '../pages/ProfilePage'; 
 import MyReservationsPage from '../pages/MyReservationsPage';
 import ReservationsPage from '../pages/librarian/ReservationsPage'; 
-import MyFinesPage from '../pages/MyFinesPage'; 
+import MyFinesPage from '../pages/MyFinesPage';
+import ManualFinesPage from '../pages/librarian/ManualFinesPage';
 
 const router = createBrowserRouter([
   {
@@ -81,6 +82,11 @@ const router = createBrowserRouter([
         path: '/all-reservations', // <-- YANGI YO'L
         element: <LibrarianRoute />,
         children: [{ path: '', element: <ReservationsPage /> }],
+      },
+      {
+        path: '/manual-fines',
+        element: <LibrarianRoute />,
+        children: [{ path: '', element: <ManualFinesPage /> }],
       },
       {
         path: '/my-fines',

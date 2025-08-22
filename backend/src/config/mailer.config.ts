@@ -10,12 +10,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Email transporter sozlamalarida xatolik:', error);
-  } else {
-    console.log("✅ Email transporter xabar jo'natishga tayyor.");
-  }
-});
+if (process.env.NODE_ENV !== 'test') {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Email transporter sozlamalarida xatolik:', error);
+    } else {
+      console.log("✅ Email transporter xabar jo'natishga tayyor.");
+    }
+  });
+}
 
 export default transporter;

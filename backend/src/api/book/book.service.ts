@@ -6,8 +6,15 @@ import redisClient from '../../config/redis.config.js';
 import ApiError from '../../utils/ApiError.js';
 import { ReservationStatus } from '@prisma/client';
 import { getIo } from '../../utils/socket.js';
+import xlsx from 'xlsx';
+import fs from 'fs';
+import path from 'path';
 
 export const createBook = async (input: Prisma.BookCreateInput) => {
+  if (!input.coverImage) {
+    input.coverImage = '/public/uploads/books/default.png';
+  }
+
   const newBook = await prisma.book.create({
     data: input,
     include: { category: true },
@@ -114,43 +121,47 @@ export const updateBook = async (id: string, data: Prisma.BookUpdateInput) => {
 
 export const deleteBook = async (id: string) => {
   const book = await prisma.book.findUnique({ where: { id } });
-
   if (!book) {
     throw new ApiError(404, 'Book not found.');
   }
-
   if (book.status !== 'AVAILABLE') {
     throw new ApiError(
       400,
-      'You can only delete books that are currently available. This book is either on loan or reserved.',
+      'You can only delete books that are currently available.',
     );
   }
 
-  // Bitta tranzaksiya ichida kitobga bog'liq barcha narsani tozalaymiz
+  // Rasm yo'lini tranzaksiyadan oldin saqlab olamiz
+  const imagePath = book.coverImage;
+
   await prisma.$transaction(async (tx) => {
-    // Kitobga bog'liq ijaralarni topamiz
     const loans = await tx.loan.findMany({ where: { bookId: id } });
     const loanIds = loans.map((l) => l.id);
-
-    // O'sha ijaralarga bog'liq jarimalarni o'chiramiz
     if (loanIds.length > 0) {
       await tx.fine.deleteMany({ where: { loanId: { in: loanIds } } });
     }
-
-    // Endi ijaralarning o'zini o'chiramiz
     await tx.loan.deleteMany({ where: { bookId: id } });
-
-    // Boshqa bog'liqliklarni o'chiramiz
     await tx.bookComment.deleteMany({ where: { bookId: id } });
     await tx.reservation.deleteMany({ where: { bookId: id } });
-
-    // Va nihoyat, kitobning o'zini o'chiramiz
     await tx.book.delete({ where: { id } });
   });
 
+  // Tranzaksiya muvaffaqiyatli yakunlangandan so'ng, rasm faylini o'chiramiz
+  if (imagePath && imagePath !== '/public/uploads/books/default.png') {
+    try {
+      // Bazadagi yo'l '/public/...' bilan boshlanadi, fayl tizimi uchun boshidagi '/' kerak emas
+      const fullPath = path.join(process.cwd(), imagePath.substring(1));
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        console.log(`Successfully deleted image: ${fullPath}`);
+      }
+    } catch (err) {
+      console.error(`Failed to delete image ${imagePath}:`, err);
+    }
+  }
+
   const BOOK_CACHE_KEY = `book:${id}`;
   await redisClient.del(BOOK_CACHE_KEY);
-  console.log(`Book cache invalidated for ID: ${id}`);
 };
 
 export const createComment = async (input: {
@@ -309,4 +320,78 @@ export const reserveBook = async (bookId: string, userId: string) => {
 
     return reservation;
   });
+};
+
+export const bulkCreateBooks = async (fileBuffer: Buffer) => {
+  const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const booksJson = xlsx.utils.sheet_to_json(worksheet) as any[];
+
+  if (!booksJson || booksJson.length === 0) {
+    throw new ApiError(400, 'Excel fayli bo`sh yoki noto`g`ri formatda.');
+  }
+
+  const allCategories = await prisma.category.findMany();
+  const categoryMap = new Map(
+    allCategories.map((cat) => [cat.name.toLowerCase(), cat.id]),
+  );
+
+  const booksToCreate: Prisma.BookCreateManyInput[] = [];
+
+  for (const book of booksJson) {
+    if (!book.title || !book.author || !book.category) {
+      throw new ApiError(
+        400,
+        `Excel faylida barcha kerakli ustunlar (title, author, category) bo'lishi shart.`,
+      );
+    }
+
+    const categoryId = categoryMap.get(String(book.category).toLowerCase());
+    if (!categoryId) {
+      throw new ApiError(400, `"${book.category}" nomli kategoriya topilmadi.`);
+    }
+
+    booksToCreate.push({
+      title: String(book.title),
+      author: String(book.author),
+      categoryId: categoryId,
+      isbn: book.isbn ? String(book.isbn) : null,
+      description: book.description ? String(book.description) : null,
+      publisher: book.publisher ? String(book.publisher) : null,
+      publishedYear: book.publishedYear ? Number(book.publishedYear) : null,
+      pageCount: book.pageCount ? Number(book.pageCount) : null,
+      coverImage: '/public/uploads/books/default.png',
+    });
+  }
+
+  const result = await prisma.book.createMany({
+    data: booksToCreate,
+    skipDuplicates: true,
+  });
+
+  // --- YANGI QO'SHILGAN BILDirishNOMA MANTIG'I ---
+  if (result.count > 0) {
+    const usersToNotify = await prisma.user.findMany({
+      where: { role: 'USER' },
+      select: { id: true },
+    });
+
+    if (usersToNotify.length > 0) {
+      const notificationData = usersToNotify.map((user) => ({
+        userId: user.id,
+        message: `Kutubxonaga ${result.count} ta yangi kitob qo'shildi! Katalog bilan tanishing.`,
+        type: NotificationType.INFO,
+      }));
+
+      await prisma.notification.createMany({ data: notificationData });
+
+      const io = getIo();
+      // Barcha foydalanuvchilarga bildirishnomalarni yangilash uchun signal yuboramiz
+      io.to(usersToNotify.map((u) => u.id)).emit('refetch_notifications');
+    }
+  }
+  // --- MANTIQ TUGADI ---
+
+  return result;
 };

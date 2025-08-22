@@ -1,12 +1,13 @@
-// src/pages/librarian/UsersPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, Button, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Paper, InputBase, IconButton } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Paper, InputBase, IconButton, Pagination } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import api from '../../api';
-import type { User } from '../../types';
+import type { User, PaginatedResponse } from '../../types';
 import UsersTable from '../../components/users/UsersTable';
 import UserFormModal from '../../components/users/UserFormModal';
+import BulkUserUploadModal from '../../components/users/BulkUserUploadModal';
 import toast from 'react-hot-toast';
 
 const UsersPage: React.FC = () => {
@@ -14,18 +15,36 @@ const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // --- PAGINATSIYA VA QIDIRUV UCHUN STATE'LAR ---
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isBulkModalOpen, setBulkModalOpen] = useState(false); 
+
+  // Qidiruv uchun "debounce" effekti
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(1); // Qidiruv o'zgarganda birinchi sahifaga o'tish
+    }, 500); // Foydalanuvchi yozishni to'xtatgandan 500ms keyin ishlaydi
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get<User[]>('/users');
-      setUsers(response.data);
+      const response = await api.get<PaginatedResponse<User>>('/users', {
+        params: { page, limit: 10, search: debouncedSearchTerm || undefined },
+      });
+      setUsers(response.data.data);
+      setTotalPages(response.data.meta.totalPages);
     } catch (err) {
       const errorMessage = 'Foydalanuvchilarni yuklashda xatolik yuz berdi.';
       setError(errorMessage);
@@ -33,7 +52,7 @@ const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, debouncedSearchTerm]);
 
   useEffect(() => {
     fetchUsers();
@@ -43,27 +62,22 @@ const UsersPage: React.FC = () => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
-
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedUser(null);
   };
-  
   const handleSuccess = () => {
     handleCloseModal();
     fetchUsers();
   };
-
   const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
     setDeleteConfirmOpen(true);
   };
-
   const handleCloseDeleteConfirm = () => {
     setUserToDelete(null);
     setDeleteConfirmOpen(false);
   };
-
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
     try {
@@ -77,47 +91,48 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  if (loading) return <CircularProgress />;
+  if (loading && users.length === 0) return <CircularProgress />;
   if (error && users.length === 0) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Foydalanuvchilar
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenModal()}
-        >
-          Yangi Foydalanuvchi
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" startIcon={<GroupAddIcon />} onClick={() => setBulkModalOpen(true)}>
+            Ommaviy Qo'shish
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenModal()}>
+            Yangi Foydalanuvchi
+          </Button>
+        </Box>
       </Box>
 
-      {/* Qidiruv va boshqa filtrlar uchun joy */}
-      <Paper sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: 400, mb: 3, borderRadius: '12px' }}>
-        <InputBase
-          sx={{ ml: 1, flex: 1 }}
-          placeholder="Foydalanuvchilarni qidirish..."
-        />
+      <Paper sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: { xs: '100%', md: 400 }, mb: 3, borderRadius: '12px' }}>
+        <InputBase sx={{ ml: 1, flex: 1 }} placeholder="Foydalanuvchilarni qidirish..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         <IconButton type="button" sx={{ p: '10px' }} aria-label="search">
           <SearchIcon />
         </IconButton>
       </Paper>
       
-      {/* Jadval endi chiroyliroq Paper ichida */}
       <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
         <UsersTable users={users} onEdit={handleOpenModal} onDelete={handleDeleteClick} />
       </Paper>
       
-      <UserFormModal
-        open={isModalOpen}
-        onClose={handleCloseModal}
-        onSuccess={handleSuccess}
-        user={selectedUser}
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} color="primary" />
+        </Box>
+      )}
+      
+      <UserFormModal open={isModalOpen} onClose={handleCloseModal} onSuccess={handleSuccess} user={selectedUser} />
+      <BulkUserUploadModal
+        open={isBulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        onSuccess={() => { setBulkModalOpen(false); fetchUsers(); }}
       />
-
       <Dialog open={isDeleteConfirmOpen} onClose={handleCloseDeleteConfirm}>
         <DialogTitle>O'chirishni tasdiqlang</DialogTitle>
         <DialogContent>

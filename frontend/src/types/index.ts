@@ -40,6 +40,7 @@ export interface Book {
   coverImage?: string;
   status: BookStatus;
   category: Category;
+  isbn?: string;
   // ...kelajakda kerak bo'lishi mumkin bo'lgan boshqa maydonlar
 }
 

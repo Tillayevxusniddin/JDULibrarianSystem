@@ -20,3 +20,14 @@ export const markFineAsPaidSchema = z.object({
   body: emptySchema,
   query: emptySchema,
 });
+
+export const createManualFineSchema = z.object({
+  body: z.object({
+    userId: z.string().uuid(),
+    bookId: z.string().uuid(),
+    amount: z.number().min(0),
+    reason: z
+      .string()
+      .min(10, "Sabab kamida 10 ta belgidan iborat bo'lishi kerak"),
+  }),
+});

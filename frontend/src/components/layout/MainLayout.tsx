@@ -22,6 +22,10 @@ const MainLayout: React.FC = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
+  const avatarUrl = user?.profilePicture
+    ? `http://localhost:5000/public${user.profilePicture}`
+    : undefined;
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh'}}>
       {/* Sidebar */}
@@ -88,7 +92,10 @@ const MainLayout: React.FC = () => {
               {themeMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
             <Typography sx={{ mx: 2 }}>{user?.firstName} {user?.lastName}</Typography>
-            <Avatar sx={{ bgcolor: 'secondary.main' }}>{user?.firstName.charAt(0)}</Avatar>
+            <Avatar src={avatarUrl} sx={{ bgcolor: 'secondary.main' }}>
+              {/* Agar rasm bo'lmasa, ismning birinchi harfi ko'rinadi */}
+              {user?.firstName.charAt(0)}
+            </Avatar>
             <IconButton sx={{ ml: 1 }} onClick={logout} color="inherit">
               <LogoutIcon />
             </IconButton>

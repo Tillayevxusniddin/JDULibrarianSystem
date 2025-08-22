@@ -1,12 +1,13 @@
-// src/pages/BooksPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Typography, Alert, Pagination, Box, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import LibraryAddIcon from '@mui/icons-material/LibraryAdd'; 
 import api from '../api';
 import type { Book, PaginatedResponse } from '../types';
 import BookCard from '../components/books/BookCard';
 import BookFilter from '../components/books/BookFilter';
 import BookFormModal from '../components/books/BookFormModal';
+import BulkBookUploadModal from '../components/books/BulkBookUploadModal';
 import BookCardSkeleton from '../components/books/BookCardSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/auth.store';
@@ -26,6 +27,8 @@ const BooksPage: React.FC = () => {
 
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
+
+  const [isBulkModalOpen, setBulkModalOpen] = useState(false); 
 
   const { user } = useAuthStore();
 
@@ -63,6 +66,7 @@ const BooksPage: React.FC = () => {
 
   const handleSuccess = () => {
     setIsModalOpen(false);
+    setBulkModalOpen(false); // Ikkala modal uchun ham yopish
     fetchBooks();
   };
 
@@ -89,14 +93,19 @@ const BooksPage: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Kutubxona Katalogi
         </Typography>
         {user?.role === 'LIBRARIAN' && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenModal()}>
-            Yangi Kitob
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="outlined" startIcon={<LibraryAddIcon />} onClick={() => setBulkModalOpen(true)}>
+              Ommaviy Qo'shish
+            </Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenModal()}>
+              Yangi Kitob
+            </Button>
+          </Box>
         )}
       </Box>
 
@@ -104,7 +113,7 @@ const BooksPage: React.FC = () => {
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={page + filters.search + filters.categoryId} // Filtr o'zgarganda animatsiyani qayta ishga tushirish
+          key={page + filters.search + filters.categoryId}
           className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           initial="hidden"
           animate="visible"
@@ -157,12 +166,19 @@ const BooksPage: React.FC = () => {
       )}
 
       {user?.role === 'LIBRARIAN' && (
-        <BookFormModal
-          open={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={handleSuccess}
-          book={selectedBook}
-        />
+        <>
+          <BookFormModal
+            open={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSuccess={handleSuccess}
+            book={selectedBook}
+          />
+          <BulkBookUploadModal
+            open={isBulkModalOpen}
+            onClose={() => setBulkModalOpen(false)}
+            onSuccess={handleSuccess}
+          />
+        </>
       )}
 
       <Dialog open={isDeleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>

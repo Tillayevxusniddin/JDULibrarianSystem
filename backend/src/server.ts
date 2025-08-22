@@ -23,6 +23,7 @@ import notificationRouter from './api/notification/notification.route.js';
 import fineRouter from './api/fine/fine.route.js';
 import userRouter from './api/user/user.route.js';
 import reservationRouter from './api/reservation/reservation.route.js';
+import dashboardRouter from './api/dashboard/dashboard.route.js';
 
 dotenv.config();
 
@@ -33,9 +34,11 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
+// app.use(express.static(path.join(process.cwd(), 'public')));
 
 // --- Barcha routerlar ---
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/books', bookRouter);
 app.use('/api/v1/loans', loanRouter);

@@ -106,8 +106,10 @@ describe('Suggestion Routes', () => {
         .send({ status: 'INVALID_STATUS' });
 
       expect(response.statusCode).toBe(400);
+      // --- TUZATISH SHU YERDA ---
+      // Test endi backend yuborayotgan to'g'ri, o'zbekcha xabarni kutadi
       expect(response.body.messages[0]).toContain(
-        "Status must be one of: 'PENDING', 'APPROVED', or 'REJECTED'",
+        "Status 'PENDING', 'APPROVED' yoki 'REJECTED' bo'lishi kerak",
       );
     });
   });

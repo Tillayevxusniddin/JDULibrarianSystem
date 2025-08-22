@@ -26,3 +26,14 @@ export const markFineAsPaidHandler = asyncHandler(
       .json({ message: 'Fine has been paid successfully.', data: updatedFine });
   },
 );
+
+export const createManualFineHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const fineData = req.validatedData!.body;
+    const newFine = await fineService.createManualFine(fineData);
+    res.status(201).json({
+      message: 'Jarima muvaffaqiyatli yaratildi.',
+      data: newFine,
+    });
+  },
+);

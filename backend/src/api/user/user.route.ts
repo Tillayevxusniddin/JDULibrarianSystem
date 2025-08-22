@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import validate from '../../middlewares/validate.middleware.js';
 import * as userController from './user.controller.js';
+import { uploadExcel } from '../../middlewares/uploadExcel.middleware.js';
 import {
   createUserSchema,
   updateUserSchema,
@@ -33,7 +34,6 @@ router.put(
   userController.updateUserHandler,
 );
 
-// --- YANGI ROUTE ---
 router.delete(
   '/:id',
   authenticate,
@@ -47,6 +47,14 @@ router.get(
   authenticate,
   authorize(['LIBRARIAN']),
   userController.searchUsersHandler,
+);
+
+router.post(
+  '/bulk-upload',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  uploadExcel.single('usersFile'),
+  userController.bulkCreateUsersHandler,
 );
 
 export default router;

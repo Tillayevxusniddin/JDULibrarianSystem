@@ -2,7 +2,11 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import * as fineController from './fine.controller.js';
 import validate from '../../middlewares/validate.middleware.js';
-import { getAllFinesSchema, markFineAsPaidSchema } from './fine.validation.js';
+import {
+  getAllFinesSchema,
+  markFineAsPaidSchema,
+  createManualFineSchema,
+} from './fine.validation.js';
 
 const router = Router();
 
@@ -98,6 +102,14 @@ router.post(
   authorize(['LIBRARIAN']),
   validate(markFineAsPaidSchema),
   fineController.markFineAsPaidHandler,
+);
+
+router.post(
+  '/manual',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  validate(createManualFineSchema),
+  fineController.createManualFineHandler,
 );
 
 export default router;

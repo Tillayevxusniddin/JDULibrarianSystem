@@ -18,6 +18,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import BookmarksIcon from '@mui/icons-material/Bookmarks';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import SchoolIcon from '@mui/icons-material/School';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 
 // Store'larni import qilish
 import { useAuthStore } from '../../store/auth.store';
@@ -42,6 +43,7 @@ const adminNavItems = [
     { text: 'Kategoriyalar', icon: <CategoryIcon />, path: '/categories', role: ['LIBRARIAN'] },
     { text: 'Takliflar', icon: <LightbulbIcon />, path: '/suggestions', role: ['LIBRARIAN'] },
     { text: 'Jarimalar', icon: <AttachMoneyIcon />, path: '/fines', role: ['LIBRARIAN'] },
+    { text: 'Qo`lda Jarima Yozish', icon: <ReportProblemIcon />, path: '/manual-fines', role: ['LIBRARIAN'] },
     { text: 'Foydalanuvchilar', icon: <PeopleIcon />, path: '/users', role: ['LIBRARIAN'] },
 ];
 

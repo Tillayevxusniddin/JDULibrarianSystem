@@ -104,3 +104,16 @@ export const reserveBookHandler = asyncHandler(
     });
   },
 );
+
+export const bulkCreateBooksHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new ApiError(400, 'Excel fayli yuklanmadi.');
+    }
+    const result = await bookService.bulkCreateBooks(req.file.buffer);
+    res.status(201).json({
+      message: `${result.count} ta yangi kitob muvaffaqiyatli qo'shildi.`,
+      data: result,
+    });
+  },
+);

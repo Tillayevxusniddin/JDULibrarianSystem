@@ -1,4 +1,3 @@
-// src/components/books/BookFormModal.tsx
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, Typography, Box } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
@@ -8,7 +7,6 @@ import toast from 'react-hot-toast';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-// --- 1-QADAM: Bildirishnomalar store'ini import qilamiz ---
 import { useNotificationStore } from '../../store/notification.store';
 
 interface BookFormModalProps {
@@ -24,8 +22,6 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const isEditing = book !== null;
-
-  // --- 2-QADAM: Store'dan kerakli funksiyani olamiz ---
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
 
   useEffect(() => {
@@ -35,13 +31,14 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
     
     if (book) {
       setFormData({
-        title: book.title,
-        author: book.author,
+        title: book.title || '',
+        author: book.author || '',
         description: book.description || '',
-        categoryId: book.category.id,
+        categoryId: book.category.id || '',
+        isbn: book.isbn || '', // <-- ISBN'ni o'rnatish
       });
     } else {
-      setFormData({ title: '', author: '', description: '', categoryId: '' });
+      setFormData({ title: '', author: '', description: '', categoryId: '', isbn: '' }); // <-- ISBN'ni bo'shatish
     }
     setCoverImage(null);
   }, [book, open]);
@@ -59,7 +56,12 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
   const handleSubmit = async () => {
     setLoading(true);
     const data = new FormData();
-    Object.keys(formData).forEach(key => data.append(key, formData[key]));
+    // Faqat bo'sh bo'lmagan maydonlarni yuboramiz
+    Object.keys(formData).forEach(key => {
+        if (formData[key]) {
+            data.append(key, formData[key])
+        }
+    });
     if (coverImage) {
       data.append('coverImage', coverImage);
     }
@@ -71,7 +73,6 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       } else {
         await api.post('/books', data, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Kitob muvaffaqiyatli yaratildi!');
-        // --- 3-QADAM: Kitob yaratilgandan so'ng bildirishnomalarni yangilaymiz ---
         fetchNotifications(); 
       }
       onSuccess();
@@ -91,9 +92,12 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       </DialogTitle>
       <DialogContent sx={{ bgcolor: 'background.default' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField name="title" label="Sarlavha" value={formData.title || ''} onChange={handleChange} fullWidth />
-          <TextField name="author" label="Muallif" value={formData.author || ''} onChange={handleChange} fullWidth />
-          <FormControl fullWidth>
+          <TextField name="title" label="Sarlavha" value={formData.title || ''} onChange={handleChange} fullWidth required />
+          <TextField name="author" label="Muallif" value={formData.author || ''} onChange={handleChange} fullWidth required />
+          {/* --- YANGI MAYDON --- */}
+          <TextField name="isbn" label="ISBN (Ixtiyoriy)" value={formData.isbn || ''} onChange={handleChange} fullWidth />
+          {/* --- TUGADI --- */}
+          <FormControl fullWidth required>
             <InputLabel>Kategoriya</InputLabel>
             <Select name="categoryId" value={formData.categoryId || ''} label="Kategoriya" onChange={handleChange}>
               {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}

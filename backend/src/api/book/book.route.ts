@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import validate from '../../middlewares/validate.middleware.js';
+import { uploadExcel } from '../../middlewares/uploadExcel.middleware.js';
 import {
   createBookSchema,
   updateBookSchema,
@@ -265,6 +266,14 @@ router.post(
   authenticate,
   validate(reserveBookSchema),
   bookController.reserveBookHandler,
+);
+
+router.post(
+  '/bulk-upload',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  uploadExcel.single('booksFile'),
+  bookController.bulkCreateBooksHandler,
 );
 
 export default router;

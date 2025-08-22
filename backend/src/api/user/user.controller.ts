@@ -1,11 +1,24 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import * as userService from './user.service.js';
+import ApiError from '../../utils/ApiError.js';
 
 export const getAllUsersHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const users = await userService.findAllUsers();
-    res.status(200).json(users);
+    // page, limit va search'ni query'dan olamiz
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string | undefined;
+
+    const { data, total } = await userService.findAllUsers(
+      { search },
+      { page, limit },
+    );
+
+    res.status(200).json({
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    });
   },
 );
 
@@ -35,11 +48,23 @@ export const updateUserHandler = asyncHandler(
   },
 );
 
-// --- YANGI HANDLER ---
 export const deleteUserHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;
     await userService.deleteUser(id);
     res.status(204).send(); // Muvaffaqiyatli o'chirildi, javob body'si yo'q
+  },
+);
+
+export const bulkCreateUsersHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new ApiError(400, 'Excel fayli yuklanmadi.');
+    }
+    const result = await userService.bulkCreateUsers(req.file.buffer);
+    res.status(201).json({
+      message: `${result.count} ta yangi foydalanuvchi muvaffaqiyatli qo'shildi.`,
+      data: result,
+    });
   },
 );

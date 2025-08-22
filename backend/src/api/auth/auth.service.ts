@@ -144,14 +144,16 @@ export const updateProfilePicture = async (
   });
 
   if (userWithOldPicture?.profilePicture) {
+    // --- YECHIM SHU YERDA ---
+    // Bazadagi yo'l '/public/uploads/...' kabi bo'lgani uchun,
+    // boshidagi '/' belgisini olib tashlab, to'g'ri manzilni hosil qilamiz.
     const oldPath = path.join(
       process.cwd(),
-      'public',
-      userWithOldPicture.profilePicture,
+      userWithOldPicture.profilePicture.substring(1),
     );
     if (fs.existsSync(oldPath)) {
       try {
-        fs.unlinkSync(oldPath);
+        fs.unlinkSync(oldPath); // Eski faylni o'chiramiz
       } catch (err) {
         console.error("Eski rasmni o'chirishda xatolik:", err);
       }

@@ -88,8 +88,12 @@ describe('Auth Routes', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(response.statusCode).toBe(200);
-      expect(response.body.user.id).toBe(user.id);
-      expect(response.body.user.role).toBe('USER');
+      // --- TUZATISH SHU YERDA ---
+      // Javob to'g'ridan-to'g'ri foydalanuvchi obyekti bo'lgani uchun,
+      // `response.body.user` o'rniga `response.body` ni tekshiramiz.
+      expect(response.body.id).toBe(user.id);
+      expect(response.body.role).toBe('USER');
+      expect(response.body.email).toBe('me@example.com');
     });
 
     it('should return a 401 error for requests without a token', async () => {

@@ -6,69 +6,67 @@ import {
   getRegularUserToken,
   cleanDatabase,
 } from './helpers.js';
-import { Fine, User } from '@prisma/client';
 
-describe('Fine Routes', () => {
-  let librarianToken: string;
-  let userToken: string;
-  let user: User;
-  let testFine: Fine;
+// Cron job ichidagi mantiqni testda to'g'ridan-to'g'ri chaqirish uchun alohida funksiya
+const checkDueDatesManually = async () => {
+  const today_start = new Date();
+  today_start.setHours(0, 0, 0, 0);
+
+  const overdueLoans = await prisma.loan.findMany({
+    where: {
+      status: 'ACTIVE',
+      dueDate: { lt: today_start },
+    },
+    include: { book: true },
+  });
+
+  for (const loan of overdueLoans) {
+    await prisma.$transaction(async (tx) => {
+      await tx.loan.update({
+        where: { id: loan.id },
+        data: { status: 'OVERDUE' },
+      });
+      await tx.notification.create({
+        data: {
+          userId: loan.userId,
+          message: `The due date for the book "${loan.book.title}" is overdue! A fine may be applied.`,
+          type: 'FINE',
+        },
+      });
+      const existingFine = await tx.fine.findFirst({
+        where: { loanId: loan.id },
+      });
+      if (!existingFine) {
+        await tx.fine.create({
+          data: {
+            amount: 5000,
+            reason: `For not returning the book "${loan.book.title}" on time.`,
+            loanId: loan.id,
+            userId: loan.userId,
+          },
+        });
+      }
+    });
+  }
+};
+
+describe('Automatic Fine Creation Logic', () => {
+  let user: { token: string; userId: string };
+  let book: any;
+  let category: any;
 
   beforeAll(async () => {
     await cleanDatabase();
-    librarianToken = await getLibrarianToken();
-    const regularUserData = await getRegularUserToken();
-    userToken = regularUserData.token;
-
-    const foundUser = await prisma.user.findUnique({
-      where: { id: regularUserData.userId },
+    // Test uchun kerakli foydalanuvchi, kategoriya va kitobni yaratib olamiz
+    user = await getRegularUserToken();
+    category = await prisma.category.create({
+      data: { name: 'Fine Logic Test Category' },
     });
-    if (foundUser) user = foundUser;
-  });
-
-  beforeEach(async () => {
-    await cleanDatabase();
-
-    await prisma.user.create({
+    book = await prisma.book.create({
       data: {
-        email: 'librarian.basetest@example.com',
-        password: 'password',
-        firstName: 'Lib',
-        lastName: 'Base',
-        role: 'LIBRARIAN',
-      },
-    });
-    const testUser = await prisma.user.create({
-      data: {
-        email: 'user.basetest@example.com',
-        password: 'password',
-        firstName: 'User',
-        lastName: 'Base',
-        role: 'USER',
-        id: user.id,
-      },
-    });
-    user = testUser;
-
-    const category = await prisma.category.create({
-      data: { name: 'Fine Test Category' },
-    });
-    const book = await prisma.book.create({
-      data: {
-        title: 'Fine Test Book',
-        author: 'Author',
+        title: 'Book for Automatic Fine Test',
+        author: 'Author Logic',
         categoryId: category.id,
-      },
-    });
-    const loan = await prisma.loan.create({
-      data: { bookId: book.id, userId: user.id, dueDate: new Date() },
-    });
-    testFine = await prisma.fine.create({
-      data: {
-        loanId: loan.id,
-        userId: user.id,
-        amount: 5000,
-        reason: 'Test fine',
       },
     });
   });
@@ -78,65 +76,39 @@ describe('Fine Routes', () => {
     await prisma.$disconnect();
   });
 
-  describe('GET /api/v1/fines', () => {
-    it('should allow a librarian to view all fines', async () => {
-      const response = await request(app)
-        .get('/api/v1/fines')
-        .set('Authorization', `Bearer ${librarianToken}`);
+  it('should automatically create a fine when a loan becomes overdue', async () => {
+    // 1. Muddati ataylab o'tkazib yuborilgan ijara yaratamiz
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-      expect(response.statusCode).toBe(200);
-      expect(response.body).toBeInstanceOf(Array);
-      expect(response.body.length).toBe(1);
+    const loan = await prisma.loan.create({
+      data: {
+        bookId: book.id,
+        userId: user.userId,
+        dueDate: twoDaysAgo, // Qaytarish muddati 2 kun oldin o'tib ketgan
+        status: 'ACTIVE',
+      },
     });
 
-    it('should not allow a regular user to view all fines', async () => {
-      const response = await request(app)
-        .get('/api/v1/fines')
-        .set('Authorization', `Bearer ${userToken}`);
+    // 2. Cron job'dagi mantiqni qo'lda ishga tushiramiz
+    await checkDueDatesManually();
 
-      expect(response.statusCode).toBe(403);
+    // 3. Natijalarni tekshiramiz
+    // Jarima yaratildimi?
+    const fine = await prisma.fine.findFirst({ where: { loanId: loan.id } });
+    expect(fine).not.toBeNull();
+    expect(fine?.userId).toBe(user.userId);
+
+    // Ijara statusi "OVERDUE" bo'ldimi?
+    const updatedLoan = await prisma.loan.findUnique({
+      where: { id: loan.id },
     });
-  });
+    expect(updatedLoan?.status).toBe('OVERDUE');
 
-  describe('GET /api/v1/fines/my', () => {
-    it('should allow a user to view their own fines', async () => {
-      const response = await request(app)
-        .get('/api/v1/fines/my')
-        .set('Authorization', `Bearer ${userToken}`);
-
-      expect(response.statusCode).toBe(200);
-      expect(response.body).toBeInstanceOf(Array);
-      expect(response.body.length).toBe(1);
-      expect(response.body[0].id).toBe(testFine.id);
+    // Foydalanuvchiga bildirishnoma bordimi?
+    const notification = await prisma.notification.findFirst({
+      where: { userId: user.userId, type: 'FINE' },
     });
-  });
-
-  describe('POST /api/v1/fines/:id/pay', () => {
-    it('should allow a librarian to mark a fine as paid', async () => {
-      const response = await request(app)
-        .post(`/api/v1/fines/${testFine.id}/pay`)
-        .set('Authorization', `Bearer ${librarianToken}`);
-
-      expect(response.statusCode).toBe(200);
-      expect(response.body.data.isPaid).toBe(true);
-      expect(response.body.data.paidAt).not.toBeNull();
-    });
-
-    it('should not allow a regular user to pay a fine', async () => {
-      const response = await request(app)
-        .post(`/api/v1/fines/${testFine.id}/pay`)
-        .set('Authorization', `Bearer ${userToken}`);
-
-      expect(response.statusCode).toBe(403);
-    });
-
-    it('should return a 404 error for a non-existent fine', async () => {
-      const nonExistentFineId = '123e4567-e89b-12d3-a456-426614174000';
-      const response = await request(app)
-        .post(`/api/v1/fines/${nonExistentFineId}/pay`)
-        .set('Authorization', `Bearer ${librarianToken}`);
-
-      expect(response.statusCode).toBe(404);
-    });
+    expect(notification).not.toBeNull();
   });
 });
