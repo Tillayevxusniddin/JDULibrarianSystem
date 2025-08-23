@@ -86,7 +86,8 @@ export const updatePost = async (
   if (post.authorId !== userId)
     throw new ApiError(403, 'Faqat o`z postlaringizni tahrirlay olasiz.');
 
-  // Agar yangi rasm yuklangan bo'lsa, eski rasmni o'chiramiz
+  // Agar yangi rasm yuklangan bo'lsa (`data.postImage` mavjud bo'lsa)
+  // va eski rasm mavjud bo'lib, u standart rasm bo'lmasa, eskisini o'chiramiz.
   if (
     data.postImage &&
     post.postImage &&

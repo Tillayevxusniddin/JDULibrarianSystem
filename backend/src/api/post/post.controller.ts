@@ -7,6 +7,7 @@ export const createPostHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const postData = req.body;
     if (req.file) {
+      // --- YECHIM: Endi 'public/' qismini olib tashlamaymiz ---
       postData.postImage = '/' + req.file.path.replace(/\\/g, '/');
     } else {
       postData.postImage = '/public/uploads/posts/defaultpost.png';
@@ -29,11 +30,10 @@ export const updatePostHandler = asyncHandler(
     const { postId } = req.params;
     const updateData = req.body;
 
-    // Agar tahrirlash paytida yangi rasm yuklangan bo'lsa
     if (req.file) {
+      // --- YECHIM: Bu yerda ham 'public/' qismini olib tashlamaymiz ---
       updateData.postImage = '/' + req.file.path.replace(/\\/g, '/');
     }
-
     const post = await postService.updatePost(postId, req.user!.id, updateData);
     res
       .status(200)

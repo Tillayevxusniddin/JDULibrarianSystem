@@ -14,7 +14,7 @@ interface TokenPayload {
 interface AuthState {
   token: string | null;
   user: User | null;
-  userUpdateVersion: number; // <-- YANGI MAYDON
+  userUpdateVersion: number;
   login: (token: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
@@ -36,7 +36,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userData = response.data;
       set({ user: userData });
 
-      // MUHIM: Socket room'ga join qilish
+      // --- YECHIM: Tizimga kirgandan so'ng bildirishnomalarni yuklaymiz ---
+      useNotificationStore.getState().fetchNotifications();
+
       socket.emit('joinRoom', userData.id);
       console.log('🏠 Joined personal room:', userData.id);
     } catch (error) {
@@ -50,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('authToken');
     set({ token: null, user: null });
     useNotificationStore.getState().clearNotifications();
+    socket.disconnect(); // Socket'ni uzish ham muhim
   },
 
   checkAuth: async () => {
@@ -65,7 +68,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const userData = response.data;
         set({ user: userData });
 
-        // MUHIM: checkAuth'da ham room'ga join qilish
+        // --- YECHIM: Sahifa yangilanganda ham bildirishnomalarni yuklaymiz ---
+        useNotificationStore.getState().fetchNotifications();
+
         socket.emit('joinRoom', userData.id);
         console.log('🏠 Rejoined personal room:', userData.id);
       } catch (error) {
@@ -100,7 +105,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
-// SOCKET EVENT HANDLER'LAR - FAQAT SHART
+// SOCKET EVENT HANDLER'LAR (o'zgarishsiz qoladi)
 let eventHandlersRegistered = false;
 
 const registerSocketHandlers = () => {
@@ -112,6 +117,8 @@ const registerSocketHandlers = () => {
   socket.on('new_notification', (newNotification) => {
     console.log('📢 New notification received:', newNotification);
     useNotificationStore.getState().addNotification(newNotification);
+    // Bu yerga ham checkAuth qo'shish mumkin, lekin bu ortiqcha bo'lishi mumkin
+    useAuthStore.getState().checkAuth();
   });
 
   socket.on(
@@ -134,12 +141,10 @@ const registerSocketHandlers = () => {
   });
 };
 
-// Socket ulanishini kutib, handler'larni ro'yxatga olish
 socket.on('connect', () => {
   registerSocketHandlers();
 });
 
-// Agar socket allaqachon ulangan bo'lsa
 if (socket.connected) {
   registerSocketHandlers();
 }
