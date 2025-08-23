@@ -6,6 +6,7 @@ import ProtectedRoute from './ProtectedRoute';
 import BooksPage from '../pages/BooksPage';
 import BookDetailPage from '../pages/BookDetailPage';
 import LibrarianRoute from './LibrarianRoute';
+import ManagerRoute from './ManagerRoute';
 import UsersPage from '../pages/librarian/UsersPage';
 import MyLoansPage from '../pages/MyLoansPage';
 import FinesPage from '../pages/librarian/FinesPage';
@@ -19,6 +20,15 @@ import MyReservationsPage from '../pages/MyReservationsPage';
 import ReservationsPage from '../pages/librarian/ReservationsPage'; 
 import MyFinesPage from '../pages/MyFinesPage';
 import ManualFinesPage from '../pages/librarian/ManualFinesPage';
+import ManagerPage from '../pages/manager/ManagerPage';
+import PremiumRoute from './PremiumRoute';
+import MyChannelPage from '../pages/MyChannelPage';
+import PremiumPage from '../pages/PremiumPage';
+import ChannelViewPage from '../pages/ChannelViewPage';
+import MySubscriptionsPage from '../pages/MySubscriptionsPage';
+import ChannelsListPage from '../pages/ChannelsListPage'; 
+
+
 
 const router = createBrowserRouter([
   {
@@ -30,9 +40,14 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />, // Bu yo'l va uning ichidagilar himoyalangan
     children: [
       {
+        path: '/channels/:linkName',
+        element: <ChannelViewPage />
+      },
+      {
         path: '/',
         element: <DashboardPage />,
       },
+      { path: '/channels', element: <ChannelsListPage /> },
       {
         path: '/books',
         element: <BooksPage />,
@@ -92,11 +107,32 @@ const router = createBrowserRouter([
         path: '/my-fines',
         element: <MyFinesPage />,
       },
-      { path: '/my-reservations', element: <MyReservationsPage /> },
       {
-  path: '/profile', // <-- YANGI YO'L
-  element: <ProfilePage />,
-},
+        path: '/get-premium',
+        element: <PremiumPage />,
+      },
+      {
+        path: '/my-subscriptions',
+        element: <MySubscriptionsPage />,
+      },
+      {
+        path: '/manager-panel',
+        // Bu yerga keyinroq ManagerRoute qo'yamiz, hozircha LibrarianRoute ishlatib turamiz
+        element: <ManagerRoute />, // VAQTINCHALIK (yoki MANAGER uchun alohida route guard yarating)
+        children: [{ path: '', element: <ManagerPage /> }],
+      },
+      { path: '/my-reservations', element: <MyReservationsPage /> 
+
+      },
+      {
+        path: '/my-channel',
+        element: <PremiumRoute />,
+        children: [{ path: '', element: <MyChannelPage /> }],
+      },
+      {
+        path: '/profile', // <-- YANGI YO'L
+        element: <ProfilePage />,
+      },
       // Kelajakda bu yerga boshqa himoyalangan sahifalar qo'shiladi
       // Masalan: { path: '/books', element: <BooksPage /> }
     ],

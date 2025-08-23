@@ -11,6 +11,8 @@ import * as categoryController from './category.controller.js';
 
 const router = Router();
 
+router.use(authenticate);
+
 /**
  * @openapi
  * tags:

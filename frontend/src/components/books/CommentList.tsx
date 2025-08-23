@@ -1,9 +1,9 @@
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText, Divider, Rating } from '@mui/material';
-import type { Comment } from '../../types';
+import type { BookComment } from '../../types';
 
 interface CommentListProps {
-  comments: Comment[];
+  comments: BookComment[]; 
 }
 
 const CommentList: React.FC<CommentListProps> = ({ comments }) => {
@@ -12,7 +12,7 @@ const CommentList: React.FC<CommentListProps> = ({ comments }) => {
   }
 
   return (
-    <List>
+    <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
       {comments.map((comment, index) => (
         <React.Fragment key={comment.id}>
           <ListItem alignItems="flex-start">
@@ -21,16 +21,16 @@ const CommentList: React.FC<CommentListProps> = ({ comments }) => {
             </ListItemAvatar>
             <ListItemText
               primary={
-                <Box className="flex items-center">
-                  <Typography component="span" variant="body1" className="font-bold">
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography component="span" variant="body1" sx={{ fontWeight: 'bold' }}>
                     {comment.user.firstName} {comment.user.lastName}
                   </Typography>
-                  {comment.rating && <Rating name="read-only" value={comment.rating} readOnly size="small" className="ml-2" />}
+                  {comment.rating && <Rating name="read-only" value={comment.rating} readOnly size="small" sx={{ ml: 2 }} />}
                 </Box>
               }
               secondary={
                 <>
-                  <Typography component="span" variant="body2" color="text.primary" className="block">
+                  <Typography component="span" variant="body2" color="text.primary" sx={{ display: 'block' }}>
                     {comment.comment}
                   </Typography>
                   {new Date(comment.createdAt).toLocaleDateString()}

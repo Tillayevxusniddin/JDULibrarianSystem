@@ -1,6 +1,7 @@
 import prisma from '../../config/db.config.js';
 import bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
+import { getIo } from '../../utils/socket.js';
 import ApiError from '../../utils/ApiError.js';
 import { sendEmail } from '../../utils/sendEmail.js';
 import fs from 'fs'; // Fayl tizimi bilan ishlash uchun
@@ -32,6 +33,7 @@ export const findAllUsers = async (
     role: true,
     status: true,
     createdAt: true,
+    isPremium: true, // <-- YECHIM: SHU QATOR QO'SHILDI
   };
 
   const [users, total] = await prisma.$transaction([
@@ -144,24 +146,54 @@ export const deleteUser = async (id: string) => {
     throw new ApiError(404, 'Foydalanuvchi topilmadi.');
   }
 
-  // Rasm yo'lini tranzaksiyadan oldin saqlab olamiz
   const imagePath = user.profilePicture;
 
-  // Foydalanuvchiga bog'liq barcha ma'lumotlarni bitta tranzaksiyada o'chiramiz
   await prisma.$transaction(async (tx) => {
+    // --- YANGI QO'SHILGAN MANTIQ START ---
+
+    // 1. Foydalanuvchiga tegishli kanalni topamiz
+    const channel = await tx.channel.findUnique({
+      where: { ownerId: id },
+      select: { id: true }, // Faqat ID'si kerak
+    });
+
+    // 2. Agar kanal mavjud bo'lsa, unga tegishli hamma narsani o'chiramiz
+    if (channel) {
+      // Kanaldagi postlarga bog'liq reaksiyalarni o'chiramiz
+      await tx.postReaction.deleteMany({
+        where: { post: { channelId: channel.id } },
+      });
+
+      // Kanaldagi postlarga bog'liq izohlarni o'chiramiz
+      await tx.postComment.deleteMany({
+        where: { post: { channelId: channel.id } },
+      });
+
+      // Kanaldagi postlarni o'chiramiz (va ularga bog'liq rasmlarni ham o'chirish kerak bo'ladi)
+      // Hozircha faqat ma'lumotlar bazasidan o'chiramiz
+      await tx.post.deleteMany({ where: { channelId: channel.id } });
+
+      // Va nihoyat, kanalning o'zini o'chiramiz
+      await tx.channel.delete({ where: { id: channel.id } });
+    }
+
+    // --- YANGI QO'SHILGAN MANTIQ END ---
+
+    // Mavjud o'chirish logikasi
     await tx.notification.deleteMany({ where: { userId: id } });
     await tx.fine.deleteMany({ where: { userId: id } });
     await tx.bookComment.deleteMany({ where: { userId: id } });
     await tx.reservation.deleteMany({ where: { userId: id } });
     await tx.loan.deleteMany({ where: { userId: id } });
     await tx.bookSuggestion.deleteMany({ where: { userId: id } });
+
+    // Eng oxirida foydalanuvchini o'chiramiz
     await tx.user.delete({ where: { id } });
   });
 
-  // Tranzaksiya muvaffaqiyatli yakunlangandan so'ng, rasm faylini o'chiramiz
+  // Rasm faylini o'chirish logikasi o'zgarishsiz qoladi
   if (imagePath) {
     try {
-      // Bazadagi yo'l '/public/...' bilan boshlanadi, fayl tizimi uchun boshidagi '/' kerak emas
       const fullPath = path.join(process.cwd(), imagePath.substring(1));
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
@@ -210,4 +242,79 @@ export const bulkCreateUsers = async (fileBuffer: Buffer) => {
   });
 
   return result; // Bu yerda nechta yozuv qo'shilgani haqida ma'lumot qaytadi
+};
+
+export const updateUserPremiumStatus = async (
+  userId: string,
+  isPremium: boolean,
+) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new ApiError(404, 'Foydalanuvchi topilmadi.');
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { isPremium },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      status: true,
+      profilePicture: true,
+      isPremium: true,
+      createdAt: true,
+    },
+  });
+
+  console.log('🔄 Updated user premium status:', {
+    userId,
+    isPremium,
+    userEmail: updatedUser.email,
+  });
+
+  // Foydalanuvchiga bildirishnoma yuborish
+  const message = isPremium
+    ? 'Tabriklaymiz! Sizga Premium tarif taqdim etildi. Endi o`z kanalingizni ochishingiz mumkin.'
+    : 'Sizning Premium tarifingiz bekor qilindi.';
+
+  const newNotification = await prisma.notification.create({
+    data: {
+      userId: userId,
+      message: message,
+      type: NotificationType.INFO,
+    },
+  });
+
+  console.log('📝 Created notification:', {
+    notificationId: newNotification.id,
+    userId,
+    message,
+  });
+
+  const io = getIo();
+
+  // Socket event'larini yuborish
+  console.log('📡 Sending socket events to room:', userId);
+
+  // 1. Yangi bildirishnoma yuborish
+  io.to(userId).emit('new_notification', newNotification);
+  console.log('✅ Sent new_notification event');
+
+  // 2. Premium status o'zgarganini bildirish
+  io.to(userId).emit('premium_status_changed', {
+    isPremium,
+    message: `Premium status ${isPremium ? 'yoqildi' : "o'chirildi"}`,
+  });
+  console.log('✅ Sent premium_status_changed event');
+
+  // 3. Auth ma'lumotlarini qayta yuklashni so'rash
+  io.to(userId).emit('refetch_auth', {
+    reason: 'premium_status_changed',
+  });
+  console.log('✅ Sent refetch_auth event');
+
+  return updatedUser;
 };

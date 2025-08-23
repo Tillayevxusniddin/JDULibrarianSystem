@@ -68,3 +68,19 @@ export const bulkCreateUsersHandler = asyncHandler(
     });
   },
 );
+
+export const updateUserPremiumStatusHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { isPremium } = req.body;
+
+    await userService.updateUserPremiumStatus(id, isPremium);
+
+    res
+      .status(200)
+      .json({
+        message:
+          "Foydalanuvchining premium statusi muvaffaqiyatli o'zgartirildi.",
+      });
+  },
+);

@@ -40,3 +40,12 @@ export const deleteUserSchema = z.object({
   body: emptySchema,
   query: emptySchema,
 });
+
+export const updateUserPremiumSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  body: z.object({
+    isPremium: z.boolean(),
+  }),
+});

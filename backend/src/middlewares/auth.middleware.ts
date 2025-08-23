@@ -42,3 +42,21 @@ export const authorize = (allowedRoles: Role[]) => {
     next();
   };
 };
+
+export const optionalAuthenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      req.user = decoded as { id: string; role: string };
+    } catch (error) {
+      // Token noto'g'ri bo'lsa ham, xatolik bermaymiz, shunchaki o'tkazib yuboramiz
+    }
+  }
+  next();
+};

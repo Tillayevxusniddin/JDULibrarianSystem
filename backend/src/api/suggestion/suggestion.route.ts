@@ -9,6 +9,8 @@ import * as suggestionController from './suggestion.controller.js';
 
 const router = Router();
 
+router.use(authenticate);
+
 /**
  * @openapi
  * tags:

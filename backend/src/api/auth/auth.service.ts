@@ -75,8 +75,9 @@ export const getProfile = async (userId: string) => {
       lastName: true,
       role: true,
       status: true,
-      profilePicture: true, // <-- TUZATISH 1: SHU QATOR QO'SHILDI
+      profilePicture: true,
       createdAt: true,
+      isPremium: true, // <--- SHU QATORNI QO'SHING
     },
   });
 

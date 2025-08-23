@@ -1,5 +1,5 @@
 // Foydalanuvchi roli
-export type UserRole = 'LIBRARIAN' | 'USER';
+export type UserRole = 'LIBRARIAN' | 'USER' | 'MANAGER';
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 export type SuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type LoanStatus = 'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'PENDING_RETURN';
@@ -24,14 +24,26 @@ export type BookStatus =
   | 'PENDING_RETURN'
   | 'MAINTENANCE';
 
-// Kategoriya uchun interfeys
+// --- INTERFEYSLAR ---
+
 export interface Category {
   id: string;
   name: string;
   description?: string;
 }
 
-// Kitob uchun interfeys
+export interface BookComment {
+  id: string;
+  comment: string;
+  rating?: number;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
 export interface Book {
   id: string;
   title: string;
@@ -41,23 +53,8 @@ export interface Book {
   status: BookStatus;
   category: Category;
   isbn?: string;
-  // ...kelajakda kerak bo'lishi mumkin bo'lgan boshqa maydonlar
+  comments?: BookComment[]; // <-- TUZATISH: Nomi "comments"ga qaytarildi
 }
-
-// Izoh uchun interfeys
-export interface Comment {
-  id: string;
-  comment: string;
-  rating?: number;
-  createdAt: string; // JSON'da sana matn ko'rinishida keladi
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  };
-}
-
-// Ijara uchun interfeys
 
 export interface Loan {
   id: string;
@@ -67,13 +64,12 @@ export interface Loan {
   borrowedAt: string;
   dueDate: string;
   returnedAt?: string;
-  renewalRequested: boolean; // <-- QO'SHILDI
+  renewalRequested: boolean;
   book: {
     id: string;
     title: string;
   };
   user: {
-    // <-- QO'SHILDI (Kutubxonachi uchun)
     id: string;
     firstName: string;
     lastName: string;
@@ -89,6 +85,8 @@ export interface User {
   status: UserStatus;
   createdAt: string;
   profilePicture?: string;
+  isPremium: boolean;
+  bookComments?: BookComment[]; // Bu nom to'g'ri, chunki Prisma sxemasida shunday nom berganmiz
 }
 
 export interface Suggestion {
@@ -146,7 +144,61 @@ export interface Reservation {
   };
 }
 
-// API'dan keladigan paginatsiyali javob uchun umumiy tip
+export interface Channel {
+  id: string;
+  name: string;
+  linkName: string;
+  bio?: string;
+  logoImage?: string;
+  ownerId: string;
+  owner?: {
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  posts?: Post[];
+  _count?: {
+    followers: number;
+  };
+  isFollowed?: boolean;
+}
+
+export interface Post {
+  id: string;
+  content: string;
+  postImage?: string;
+  createdAt: string;
+  authorId: string;
+  channelId: string;
+  channel?: Channel;
+  author: {
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  reactions: PostReaction[];
+}
+
+export interface PostComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  postId: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  parentId: string | null;
+  replies: PostComment[];
+}
+
+export interface PostReaction {
+  emoji: string;
+  userId: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {

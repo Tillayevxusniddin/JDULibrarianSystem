@@ -17,6 +17,8 @@ import * as bookController from './book.controller.js';
 
 const router = Router();
 
+router.use(authenticate);
+
 /**
  * @openapi
  * tags:

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import api from '../api';
 import type { Notification } from '../types';
-import { socket } from '../api/socket';
 import toast from 'react-hot-toast';
 
 interface NotificationState {
@@ -113,15 +112,3 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 }));
-
-// --- SOCKET HODISALARINI TINGLASH ---
-
-socket.on('new_notification', (newNotification: Notification) => {
-  console.log('New notification received via socket:', newNotification);
-  useNotificationStore.getState().addNotification(newNotification);
-});
-
-socket.on('refetch_notifications', () => {
-  console.log('Refetch signal received from server via socket.');
-  useNotificationStore.getState().fetchNotifications();
-});

@@ -7,6 +7,7 @@ import {
   createUserSchema,
   updateUserSchema,
   deleteUserSchema,
+  updateUserPremiumSchema,
 } from './user.validation.js';
 
 const router = Router();
@@ -14,7 +15,7 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  authorize(['LIBRARIAN']),
+  authorize(['LIBRARIAN', 'MANAGER']),
   userController.getAllUsersHandler,
 );
 
@@ -55,6 +56,14 @@ router.post(
   authorize(['LIBRARIAN']),
   uploadExcel.single('usersFile'),
   userController.bulkCreateUsersHandler,
+);
+
+router.put(
+  '/:id/premium',
+  authenticate,
+  authorize(['MANAGER']), // Faqat MANAGER uchun
+  validate(updateUserPremiumSchema),
+  userController.updateUserPremiumStatusHandler,
 );
 
 export default router;

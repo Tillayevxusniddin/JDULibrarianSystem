@@ -19,8 +19,13 @@ import BookmarksIcon from '@mui/icons-material/Bookmarks';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
+import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
+import DynamicFeedIcon from '@mui/icons-material/DynamicFeed'; // Yangi ikonka
+import RssFeedIcon from '@mui/icons-material/RssFeed';
 
-// Store'larni import qilish
+
 import { useAuthStore } from '../../store/auth.store';
 import { useNotificationStore } from '../../store/notification.store';
 import { useUiStore } from '../../store/ui.store';
@@ -28,13 +33,18 @@ import { useUiStore } from '../../store/ui.store';
 // Navigatsiya elementlari ro'yxati
 const navItems = [
     { text: 'Asosiy Sahifa', icon: <DashboardIcon />, path: '/', role: ['LIBRARIAN', 'USER'] },
+    { text: 'Mening Kanalim', icon: <RssFeedIcon />, path: '/my-channel', role: ['USER'], premiumOnly: true },
+    { text: 'Kanallar', icon: <DynamicFeedIcon />, path: '/channels', role: ['USER'] },
     { text: 'Kitoblar', icon: <BookIcon />, path: '/books', role: ['LIBRARIAN', 'USER'] },
     { text: 'Mening Ijaralarim', icon: <AssignmentIcon />, path: '/my-loans', role: ['USER'] },
     { text: 'Mening Rezervlarim', icon: <BookmarkAddedIcon />, path: '/my-reservations', role: ['USER'] },
     { text: 'Bildirishnomalar', icon: <NotificationsIcon />, path: '/notifications', role: ['LIBRARIAN', 'USER'] },
+    { text: 'Mening Obunalarim', icon: <SubscriptionsIcon />, path: '/my-subscriptions', role: ['USER'] },
     { text: 'Kitob Taklif Qilish', icon: <AddCommentIcon />, path: '/suggest-book', role: ['USER'] },
     { text: 'Mening Jarimalarim', icon: <MonetizationOnIcon />, path: '/my-fines', role: ['USER'] },
+    { text: 'Premium Olish', icon: <WorkspacePremiumIcon />, path: '/get-premium', role: ['USER'], hideWhenPremium: true },
     { text: 'Mening Profilim', icon: <AccountCircleIcon />, path: '/profile', role: ['LIBRARIAN', 'USER'] },
+    { text: 'Menejer Paneli', icon: <SupervisorAccountIcon />, path: '/manager-panel', role: ['MANAGER'] },
 ];
 
 const adminNavItems = [
@@ -54,7 +64,7 @@ const SidebarContent: React.FC = () => {
 
   const renderNavItems = (items: typeof navItems) => {
     return items.map((item) => (
-      user && item.role.includes(user.role) && (
+      user && item.role.includes(user.role) && (!item.premiumOnly || user.isPremium) && (!item.hideWhenPremium || !user.isPremium) && (
         <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
           <NavLink to={item.path} style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => setSidebarOpen(false)}>
             {({ isActive }) => (

@@ -1,95 +1,120 @@
-import React, { useEffect, useState } from 'react';
-import { Typography, Box, CircularProgress } from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Typography, Box, CircularProgress, Pagination } from '@mui/material';
 import { useAuthStore } from '../store/auth.store';
-import StatCard from '../components/dashboard/StatCard';
-import BookIcon from '@mui/icons-material/Book';
-import PeopleIcon from '@mui/icons-material/People';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { motion } from 'framer-motion';
-import type { Variants } from 'framer-motion'; // <-- O'ZGARISH SHU YERDA
 import api from '../api';
 import toast from 'react-hot-toast';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
-};
-
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } },
-};
-
-// Statistikani saqlash uchun tip
-interface StatsData {
-  [key: string]: number;
-}
+import type { Post, PaginatedResponse, Channel } from '../types';
+import PostCard from '../components/channel/PostCard';
+import CommentDrawer from '../components/channel/CommentDrawer';
+import EditPostModal from '../components/channel/EditPostModal';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState<StatsData | null>(null);
+  const [feed, setFeed] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [commentPost, setCommentPost] = useState<Post | null>(null);
+  const [postToEdit, setPostToEdit] = useState<Post | null>(null);
+
+  const fetchFeed = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.get<PaginatedResponse<Post>>('/feed', {
+        params: { page, limit: 10 },
+      });
+      setFeed(response.data.data);
+      setTotalPages(response.data.meta.totalPages);
+    } catch (error) {
+      toast.error('Lentani yuklashda xatolik yuz berdi.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/dashboard/stats');
-        setStats(response.data.data);
-      } catch (error) {
-        toast.error('Statistikani yuklashda xatolik yuz berdi.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (user?.role === 'USER') {
+      fetchFeed();
+    } else {
+      setLoading(false);
+    }
+  }, [fetchFeed, user]);
 
-    fetchStats();
-  }, []);
+  const handlePostUpdated = (updatedPost: Post) => {
+    setFeed(feed.map(p => p.id === updatedPost.id ? updatedPost : p));
+  };
 
-  const librarianStats = stats ? [
-    { title: "Jami Kitoblar", value: stats.totalBooks, icon: <BookIcon />, color: "#1976d2" },
-    { title: "Jami Foydalanuvchilar", value: stats.totalUsers, icon: <PeopleIcon />, color: "#388e3c" },
-    { title: "Yangi Takliflar", value: stats.newSuggestions, icon: <LightbulbIcon />, color: "#f57c00" },
-  ] : [];
-
-  const userStats = stats ? [
-    { title: "Mening Ijaralarim", value: stats.activeLoans, icon: <AssignmentIcon />, color: "#7b1fa2" },
-    { title: "Mening Rezervlarim", value: stats.activeReservations, icon: <BookIcon />, color: "#00796b" },
-  ] : [];
-
-  const displayStats = user?.role === 'LIBRARIAN' ? librarianStats : userStats;
+  if (user?.role === 'LIBRARIAN' || user?.role === 'MANAGER') {
+    return (
+        <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                Xush kelibsiz, {user?.firstName}!
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 4 }}>
+                Bu sizning shaxsiy boshqaruv panelingiz.
+            </Typography>
+        </Box>
+    );
+  }
 
   return (
-    <Box>
-      <motion.div variants={itemVariants} initial="hidden" animate="visible">
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Xush kelibsiz, {user?.firstName}!
+    <>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3, textAlign: 'center' }}>
+          Asosiy Lenta
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 4 }}>
-          Bu sizning shaxsiy boshqaruv panelingiz.
-        </Typography>
-      </motion.div>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <motion.div
-          className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {displayStats.map((stat, index) => (
-            <motion.div key={index} variants={itemVariants}>
-              <StatCard {...stat} />
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-    </Box>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
+        ) : feed.length > 0 ? (
+          <>
+            {/* --- YECHIM SHU YERDA: Postlarni markazga keltiruvchi konteyner --- */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {feed.map(post => (
+                <motion.div 
+                    key={post.id} 
+                    initial={{ opacity: 0, y: 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+                >
+                  <PostCard
+                    post={post}
+                    channel={post.channel as Channel}
+                    onDelete={() => fetchFeed()}
+                    onEdit={setPostToEdit}
+                    onCommentClick={setCommentPost}
+                  />
+                </motion.div>
+              ))}
+            </Box>
+            {totalPages > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} color="primary" />
+              </Box>
+            )}
+          </>
+        ) : (
+          <Typography color="text.secondary" sx={{ textAlign: 'center', p: 4 }}>
+            Sizning lentangiz bo'sh. Qiziqarli kanallarga obuna bo'ling!
+          </Typography>
+        )}
+      </Box>
+
+      <CommentDrawer 
+        post={commentPost}
+        open={!!commentPost}
+        onClose={() => setCommentPost(null)}
+      />
+      <EditPostModal
+        post={postToEdit}
+        open={!!postToEdit}
+        onClose={() => setPostToEdit(null)}
+        onPostUpdated={handlePostUpdated}
+      />
+    </>
   );
 };
 

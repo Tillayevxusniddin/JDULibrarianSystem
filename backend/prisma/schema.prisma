@@ -7,9 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- ENUMLAR ---
 enum Role {
   LIBRARIAN
   USER
+  MANAGER // Yangi rol qo'shildi
 }
 
 enum UserStatus {
@@ -54,26 +56,126 @@ enum ReservationStatus {
   CANCELLED
 }
 
+// --- MODELLAR ---
+
 model User {
-  id             String           @id @default(uuid())
+  id             String     @id @default(uuid())
   firstName      String
   lastName       String
-  email          String           @unique
+  email          String     @unique
   password       String
-  role           Role             @default(USER)
-  status         UserStatus       @default(ACTIVE)
+  role           Role       @default(USER)
+  status         UserStatus @default(ACTIVE)
   profilePicture String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  loans          Loan[]
-  reservations   Reservation[]
-  comments       BookComment[]
-  suggestions    BookSuggestion[]
-  notifications  Notification[]
-  fines          Fine[]
+  isPremium      Boolean    @default(false) // Yangi maydon
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Blog tizimi uchun yangi bog'lanishlar
+  channel          Channel?       @relation("ChannelOwner")
+  posts            Post[]
+  comments         PostComment[]
+  reactions        PostReaction[]
+  followedChannels Follow[]
+
+  // Kutubxona tizimi uchun bog'lanishlar
+  loans         Loan[]
+  reservations  Reservation[]
+  bookComments  BookComment[]    @relation("UserBookComments") // Nomiga aniqlik kiritildi
+  suggestions   BookSuggestion[]
+  notifications Notification[]
+  fines         Fine[]
 
   @@map("users")
 }
+
+// --- YANGI MODELLAR (BLOG TIZIMI) ---
+
+model Channel {
+  id        String   @id @default(uuid())
+  name      String
+  linkName  String   @unique
+  bio       String?  @db.Text
+  logoImage String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String @unique
+  owner   User   @relation("ChannelOwner", fields: [ownerId], references: [id])
+
+  posts     Post[]
+  followers Follow[]
+
+  @@map("channels")
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  postImage String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  comments  PostComment[]
+  reactions PostReaction[]
+
+  @@map("posts")
+}
+
+model PostComment {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   PostComment?  @relation("Replies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies  PostComment[] @relation("Replies")
+
+  @@map("post_comments")
+}
+
+model PostReaction {
+  id        String   @id @default(uuid())
+  emoji     String
+  createdAt DateTime @default(now())
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("post_reactions")
+}
+
+model Follow {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@map("follows")
+}
+
+// --- MAVJUD MODELLAR (KUTUBXONA TIZIMI) ---
 
 model Category {
   id          String   @id @default(uuid())
@@ -146,8 +248,8 @@ model Fine {
   reason    String
   isPaid    Boolean   @default(false)
   paidAt    DateTime?
-  loanId    String?   @unique
-  loan      Loan?     @relation(fields: [loanId], references: [id])
+  loanId    String?   @unique // Ixtiyoriy qilingan
+  loan      Loan?     @relation(fields: [loanId], references: [id]) // Ixtiyoriy qilingan
   userId    String
   user      User      @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())
@@ -164,7 +266,7 @@ model BookComment {
   bookId    String
   book      Book     @relation(fields: [bookId], references: [id])
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation("UserBookComments", fields: [userId], references: [id]) // Nomiga aniqlik kiritildi
 
   @@map("book_comments")
 }
