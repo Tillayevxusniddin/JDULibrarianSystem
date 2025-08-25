@@ -22,6 +22,14 @@ services:
     volumes:
       - redis_data:/data
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: library_mailpit
+    restart: always
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
 volumes:
   postgres_data:
   redis_data:

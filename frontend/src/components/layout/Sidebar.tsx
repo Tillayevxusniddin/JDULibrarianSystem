@@ -76,7 +76,15 @@ const SidebarContent: React.FC = () => {
                   borderRadius: '8px',
                   margin: '4px 8px',
                   '&.Mui-selected': {
-                    backgroundColor: 'primary.light',
+                    backgroundColor: 'action.hover',
+                    color: 'primary.main',
+                    fontWeight: 'fontWeightBold',
+                    '& .MuiListItemIcon-root': {
+                      color: 'primary.main',
+                    },
+                  },
+                  '&.Mui-selected:hover': {
+                    backgroundColor: 'action.hover',
                     color: 'primary.main',
                     fontWeight: 'fontWeightBold',
                     '& .MuiListItemIcon-root': {
