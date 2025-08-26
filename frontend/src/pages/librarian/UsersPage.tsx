@@ -26,6 +26,7 @@ const UsersPage: React.FC = () => {
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isBulkModalOpen, setBulkModalOpen] = useState(false); 
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Qidiruv uchun "debounce" effekti
   useEffect(() => {
@@ -91,6 +92,23 @@ const UsersPage: React.FC = () => {
     }
   };
 
+  const handleSyncFromKintone = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await api.post('/kintone/sync-students');
+      const r = res.data?.result;
+      toast.success(
+        `Kintone sync: created ${r?.created ?? 0}, updated ${r?.updated ?? 0}, skipped ${r?.skipped ?? 0}.`,
+      );
+      fetchUsers();
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Kintone bilan sinxronlashtirishda xatolik.';
+      toast.error(message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (loading && users.length === 0) return <CircularProgress />;
   if (error && users.length === 0) return <Alert severity="error">{error}</Alert>;
 
@@ -101,6 +119,9 @@ const UsersPage: React.FC = () => {
           Foydalanuvchilar
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" onClick={handleSyncFromKintone} disabled={isSyncing}>
+            {isSyncing ? 'Sinxronizatsiya...' : 'Kintone bilan sinx'}
+          </Button>
           <Button variant="outlined" startIcon={<GroupAddIcon />} onClick={() => setBulkModalOpen(true)}>
             Ommaviy Qo'shish
           </Button>

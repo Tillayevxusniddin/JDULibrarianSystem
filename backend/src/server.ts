@@ -28,6 +28,7 @@ import postRouter from './api/post/post.route.js';
 import commentRouter from './api/comment/comment.route.js';
 import reactionRouter from './api/reaction/reaction.route.js';
 import feedRouter from './api/feed/feed.route.js'; // <-- YANGI IMPORT
+import kintoneRouter from './api/kintone/kintone.route.js';
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.use('/api/v1/posts', postRouter);
 app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/reactions', reactionRouter);
 app.use('/api/v1/feed', feedRouter);
+app.use('/api/v1/kintone', kintoneRouter);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 app.get('/', (req: Request, res: Response) => {
