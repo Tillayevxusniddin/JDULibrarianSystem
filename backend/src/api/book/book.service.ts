@@ -26,6 +26,8 @@ export const createBook = async (input: Prisma.BookCreateInput) => {
   (input as any).totalCopies = total;
   (input as any).availableCopies = available;
 
+  // Optional author can be omitted/null
+
   const newBook = await prisma.book.create({
     data: input,
     include: { category: true },
@@ -392,6 +394,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
     throw new ApiError(400, 'Excel fayli bo`sh yoki noto`g`ri formatda.');
   }
 
+  // Prepare category mapping for faster lookup/creation
   const allCategories = await prisma.category.findMany();
   const categoryMap = new Map(
     allCategories.map((cat) => [cat.name.toLowerCase(), cat.id]),
@@ -400,22 +403,27 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
   const booksToCreate: Prisma.BookCreateManyInput[] = [];
 
   for (const book of booksJson) {
-    if (!book.title || !book.author || !book.category) {
-      throw new ApiError(
-        400,
-        `Excel faylida barcha kerakli ustunlar (title, author, category) bo'lishi shart.`,
-      );
+    if (!book.title) {
+      throw new ApiError(400, 'Har bir qator uchun title talab qilinadi.');
     }
 
-    const categoryId = categoryMap.get(String(book.category).toLowerCase());
-    if (!categoryId) {
-      throw new ApiError(400, `"${book.category}" nomli kategoriya topilmadi.`);
+    // Resolve category (optional): if provided, map or create; else leave null
+    let categoryId: string | null = null;
+    if (book.category) {
+      const key = String(book.category).toLowerCase();
+      const existing = categoryMap.get(key);
+      if (existing) categoryId = existing;
+      else {
+        const created = await prisma.category.create({ data: { name: String(book.category) } });
+        categoryId = created.id;
+        categoryMap.set(key, created.id);
+      }
     }
 
     booksToCreate.push({
       title: String(book.title),
-      author: String(book.author),
-      categoryId: categoryId,
+      author: book.author ? String(book.author) : null,
+      categoryId: categoryId ?? undefined,
       isbn: book.isbn ? String(book.isbn) : null,
       description: book.description ? String(book.description) : null,
       publisher: book.publisher ? String(book.publisher) : null,

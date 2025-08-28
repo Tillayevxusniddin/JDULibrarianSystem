@@ -47,11 +47,11 @@ export interface BookComment {
 export interface Book {
   id: string;
   title: string;
-  author: string;
+  author?: string | null;
   description?: string;
   coverImage?: string;
   status: BookStatus;
-  category: Category;
+  category?: Category | null;
   isbn?: string;
   totalCopies?: number;
   availableCopies?: number;

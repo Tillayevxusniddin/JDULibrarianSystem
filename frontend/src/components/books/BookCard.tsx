@@ -88,13 +88,13 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
                 }}
                 transition={{ duration: 0.4, ease: "easeInOut" }}
             >
-                <Typography variant="body2" sx={{ mb: 1 }}>{book.category.name}</Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>{book.category?.name ?? 'Uncategorized'}</Typography>
             </motion.div>
             <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, lineHeight: 1.2 }}>
               {book.title}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.8 }}>
-              {book.author}
+              {book.author ?? 'Unknown'}
             </Typography>
             {typeof book.availableCopies === 'number' && typeof book.totalCopies === 'number' && (
               <Typography variant="caption" sx={{ mt: 0.5, opacity: 0.9 }}>

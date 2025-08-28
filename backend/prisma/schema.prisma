@@ -191,7 +191,7 @@ model Category {
 model Book {
   id            String        @id @default(uuid())
   title         String
-  author        String
+  author        String?
   description   String?       @db.Text
   isbn          String?       @unique
   publisher     String?
@@ -202,8 +202,8 @@ model Book {
   // Multi-copy support
   totalCopies     Int           @default(1)
   availableCopies Int           @default(1)
-  categoryId    String
-  category      Category      @relation(fields: [categoryId], references: [id])
+  categoryId    String?
+  category      Category?     @relation(fields: [categoryId], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   loans         Loan[]

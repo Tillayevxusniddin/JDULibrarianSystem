@@ -34,7 +34,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
         title: book.title || '',
         author: book.author || '',
         description: book.description || '',
-        categoryId: book.category.id || '',
+        categoryId: book.category?.id || '',
         isbn: book.isbn || '', // <-- ISBN'ni o'rnatish
         totalCopies: typeof book.totalCopies === 'number' ? book.totalCopies : 1,
         availableCopies:
@@ -131,7 +131,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       <DialogContent sx={{ bgcolor: 'background.default' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField name="title" label="Sarlavha" value={formData.title || ''} onChange={handleChange} fullWidth required />
-          <TextField name="author" label="Muallif" value={formData.author || ''} onChange={handleChange} fullWidth required />
+          <TextField name="author" label="Muallif (ixtiyoriy)" value={formData.author || ''} onChange={handleChange} fullWidth />
           {/* --- YANGI MAYDON --- */}
           <TextField name="isbn" label="ISBN (Ixtiyoriy)" value={formData.isbn || ''} onChange={handleChange} fullWidth />
           {/* --- TUGADI --- */}
@@ -156,7 +156,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
               helperText="Mavjud nusxalar jami nusxalardan oshmasin"
             />
           </Box>
-          <FormControl fullWidth required>
+          <FormControl fullWidth>
             <InputLabel>Kategoriya</InputLabel>
             <Select name="categoryId" value={formData.categoryId || ''} label="Kategoriya" onChange={handleChange}>
               {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}

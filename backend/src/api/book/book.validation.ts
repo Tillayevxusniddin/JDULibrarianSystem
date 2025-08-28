@@ -6,15 +6,13 @@ const emptySchema = z.object({}).optional();
 export const createBookSchema = z.object({
   body: z.object({
     title: z.string({ error: 'Title is required' }),
-    author: z.string({ error: 'Author is required' }),
+    author: z.string().optional(),
     description: z.string().optional(),
     isbn: z.string().optional(),
     publisher: z.string().optional(),
     publishedYear: z.coerce.number().int().positive().optional(),
     pageCount: z.coerce.number().int().positive().optional(),
-    categoryId: z
-      .string()
-      .uuid({ message: 'Category ID must be a valid UUID' }),
+    categoryId: z.string().uuid({ message: 'Category ID must be a valid UUID' }).optional(),
     totalCopies: z.coerce.number().int().min(1).optional(),
     availableCopies: z.coerce
       .number()

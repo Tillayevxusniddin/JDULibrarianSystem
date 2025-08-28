@@ -135,7 +135,7 @@ const BookDetailPage: React.FC = () => {
           <div className="md:col-span-8">
             <motion.div variants={itemVariants}>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                <Chip label={book.category.name} color="secondary" sx={{ fontWeight: 'bold' }} />
+                <Chip label={book.category?.name ?? 'Uncategorized'} color="secondary" sx={{ fontWeight: 'bold' }} />
                 {typeof book.availableCopies === 'number' && typeof book.totalCopies === 'number' && (
                   <Chip
                     label={`${book.availableCopies}/${book.totalCopies} available`}
@@ -148,7 +148,7 @@ const BookDetailPage: React.FC = () => {
                 {book.title}
               </Typography>
               <Typography variant="h5" component="h2" color="text.secondary" sx={{ mb: 3 }}>
-                {book.author}
+                {book.author ?? 'Unknown'}
               </Typography>
             </motion.div>
 

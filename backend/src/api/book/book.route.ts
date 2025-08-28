@@ -44,18 +44,20 @@ router.use(authenticate);
  *             type: object
  *             required:
  *               - title
- *               - author
- *               - categoryId
  *             properties:
  *               title:
  *                 type: string
  *               author:
  *                 type: string
+ *                 nullable: true
+ *                 description: Ixtiyoriy; bo'sh qoldirilsa null saqlanadi
  *               description:
  *                 type: string
  *               categoryId:
  *                 type: string
  *                 format: uuid
+ *                 nullable: true
+ *                 description: Ixtiyoriy; bo'sh qoldirilsa kategoriya null bo'ladi
   *               totalCopies:
   *                 type: integer
   *                 minimum: 1
@@ -300,6 +302,31 @@ router.post(
   uploadExcel.single('booksFile'),
   bookController.bulkCreateBooksHandler,
 );
+
+/**
+ * @openapi
+ * /api/v1/books/bulk-upload:
+ *   post:
+ *     summary: Excel orqali ko'p kitoblarni qo'shish (Faqat kutubxonachi)
+ *     tags:
+ *       - Books
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               booksFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel fayli. Ustunlar: title (majburiy), author (ixtiyoriy), category (ixtiyoriy), isbn, description, publisher, publishedYear, pageCount
+ *     responses:
+ *       '201':
+ *         description: Muvaffaqiyatli yuklandi
+ */
 
 /**
  * @openapi
