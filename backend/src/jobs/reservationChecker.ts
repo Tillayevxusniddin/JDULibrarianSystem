@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import prisma from '../config/db.config.js';
 import { NotificationType } from '@prisma/client';
 import { getIo } from '../utils/socket.js'; // Socket yordamchisini import qilamiz
+import { recomputeBookStatus } from '../utils/bookStatus.js';
 
 export const startReservationChecker = () => {
   console.log(
@@ -69,10 +70,12 @@ export const startReservationChecker = () => {
             nextUserNotification,
           );
         } else {
+          // No one is waiting; free the held copy
           await tx.book.update({
             where: { id: reservation.bookId },
-            data: { status: 'AVAILABLE' },
+            data: { availableCopies: { increment: 1 } },
           });
+          await recomputeBookStatus(tx as any, reservation.bookId);
         }
       });
     }

@@ -36,15 +36,41 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
         description: book.description || '',
         categoryId: book.category.id || '',
         isbn: book.isbn || '', // <-- ISBN'ni o'rnatish
+        totalCopies: typeof book.totalCopies === 'number' ? book.totalCopies : 1,
+        availableCopies:
+          typeof book.availableCopies === 'number'
+            ? book.availableCopies
+            : 1,
       });
     } else {
-      setFormData({ title: '', author: '', description: '', categoryId: '', isbn: '' }); // <-- ISBN'ni bo'shatish
+      setFormData({
+        title: '',
+        author: '',
+        description: '',
+        categoryId: '',
+        isbn: '',
+        totalCopies: 1,
+        availableCopies: 1,
+      }); // <-- ISBN'ni bo'shatish
     }
     setCoverImage(null);
   }, [book, open]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<any>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<any>,
+  ) => {
+    const { name, value } = e.target as HTMLInputElement;
+    if (name === 'totalCopies' || name === 'availableCopies') {
+      const num = value === '' ? '' : Math.max(0, Math.floor(Number(value)));
+      const draft = { ...formData, [name]: num } as any;
+      // Keep available <= total (only for local UI; backend also enforces)
+      if (name === 'totalCopies' && typeof draft.availableCopies === 'number' && typeof num === 'number' && draft.availableCopies > num) {
+        draft.availableCopies = num;
+      }
+      setFormData(draft);
+      return;
+    }
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +82,23 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
   const handleSubmit = async () => {
     setLoading(true);
     const data = new FormData();
+    // Normalize copy counts before sending
+    const total = Number(formData.totalCopies ?? 1) || 1;
+    let available = Number(formData.availableCopies ?? total) || total;
+    if (available > total) available = total;
+
+    const payload = {
+      ...formData,
+      totalCopies: total,
+      availableCopies: available,
+    };
+
     // Faqat bo'sh bo'lmagan maydonlarni yuboramiz
-    Object.keys(formData).forEach(key => {
-        if (formData[key]) {
-            data.append(key, formData[key])
-        }
+    Object.keys(payload).forEach((key) => {
+      const val = (payload as any)[key];
+      if (val !== undefined && val !== '') {
+        data.append(key, String(val));
+      }
     });
     if (coverImage) {
       data.append('coverImage', coverImage);
@@ -97,6 +135,27 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
           {/* --- YANGI MAYDON --- */}
           <TextField name="isbn" label="ISBN (Ixtiyoriy)" value={formData.isbn || ''} onChange={handleChange} fullWidth />
           {/* --- TUGADI --- */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              name="totalCopies"
+              label="Jami nusxalar"
+              type="number"
+              inputProps={{ min: 1 }}
+              value={formData.totalCopies ?? 1}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              name="availableCopies"
+              label="Mavjud nusxalar"
+              type="number"
+              inputProps={{ min: 0 }}
+              value={formData.availableCopies ?? formData.totalCopies ?? 1}
+              onChange={handleChange}
+              fullWidth
+              helperText="Mavjud nusxalar jami nusxalardan oshmasin"
+            />
+          </Box>
           <FormControl fullWidth required>
             <InputLabel>Kategoriya</InputLabel>
             <Select name="categoryId" value={formData.categoryId || ''} label="Kategoriya" onChange={handleChange}>

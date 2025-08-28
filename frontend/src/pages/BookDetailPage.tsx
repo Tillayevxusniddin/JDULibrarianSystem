@@ -1,7 +1,7 @@
 // src/pages/BookDetailPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Typography, CircularProgress, Alert, Paper, Chip, Divider, Box } from '@mui/material';
+import { Typography, CircularProgress, Alert, Paper, Chip, Divider, Box, IconButton, Tooltip } from '@mui/material';
 import api from '../api';
 import type { Book, Comment } from '../types';
 import CommentList from '../components/books/CommentList';
@@ -9,6 +9,7 @@ import CommentForm from '../components/books/CommentForm';
 import BookActions from '../components/books/BookActions';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '../store/auth.store';
 
 // Animatsiya uchun variantlar
 const containerVariants = {
@@ -30,6 +31,7 @@ const BookDetailPage: React.FC = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuthStore();
 
   const fetchBookDetails = useCallback(async () => {
     if (!id) return;
@@ -57,6 +59,8 @@ const BookDetailPage: React.FC = () => {
   const handleCommentPosted = (newComment: Comment) => {
     setComments([newComment, ...comments]);
   };
+
+  // Increment/decrement controls removed per request; manage counts in the edit form instead.
 
   if (loading) {
     return (
@@ -130,11 +134,16 @@ const BookDetailPage: React.FC = () => {
           {/* O‘ng taraf: Kitob ma’lumotlari */}
           <div className="md:col-span-8">
             <motion.div variants={itemVariants}>
-              <Chip
-                label={book.category.name}
-                color="secondary"
-                sx={{ mb: 1, fontWeight: 'bold' }}
-              />
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                <Chip label={book.category.name} color="secondary" sx={{ fontWeight: 'bold' }} />
+                {typeof book.availableCopies === 'number' && typeof book.totalCopies === 'number' && (
+                  <Chip
+                    label={`${book.availableCopies}/${book.totalCopies} available`}
+                    size="small"
+                    color={book.availableCopies > 0 ? 'success' : 'default'}
+                  />
+                )}
+              </Box>
               <Typography variant="h3" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
                 {book.title}
               </Typography>

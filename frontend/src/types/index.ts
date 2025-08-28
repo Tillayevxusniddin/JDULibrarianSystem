@@ -53,6 +53,8 @@ export interface Book {
   status: BookStatus;
   category: Category;
   isbn?: string;
+  totalCopies?: number;
+  availableCopies?: number;
   comments?: BookComment[]; // <-- TUZATISH: Nomi "comments"ga qaytarildi
 }
 

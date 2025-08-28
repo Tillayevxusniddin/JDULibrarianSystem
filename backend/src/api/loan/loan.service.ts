@@ -5,6 +5,7 @@ import { ReservationStatus } from '@prisma/client';
 import ApiError from '../../utils/ApiError.js';
 import { NotificationType } from '@prisma/client';
 import { getIo } from '../../utils/socket.js';
+import { recomputeBookStatus } from '../../utils/bookStatus.js';
 
 export const createLoan = async (bookId: string, userId: string) => {
   const BORROWING_LIMIT = 5;
@@ -37,41 +38,26 @@ export const createLoan = async (bookId: string, userId: string) => {
       throw new ApiError(404, 'Book with this ID was not found.');
     }
 
-    if (book.status === 'RESERVED') {
-      // Agar kitob band qilingan bo'lsa, faqat kerakli odamga beramiz
-      const reservation = await tx.reservation.findFirst({
-        where: { bookId, status: 'AWAITING_PICKUP' },
-      });
+    const [awaiting, bookForLoan] = await Promise.all([
+      tx.reservation.findFirst({ where: { bookId, status: 'AWAITING_PICKUP' } }),
+      tx.book.findUnique({ where: { id: bookId }, select: { availableCopies: true } }),
+    ]);
 
-      if (!reservation || reservation.userId !== userId) {
-        throw new ApiError(
-          400,
-          'This book is currently reserved for another user.',
-        );
-      }
-
-      // Rezervatsiyani bajarilgan deb belgilaymiz
-      await tx.reservation.update({
-        where: { id: reservation.id },
-        data: { status: 'FULFILLED' },
-      });
-    } else if (book.status !== 'AVAILABLE') {
-      // Boshqa har qanday holatda (BORROWED, PENDING_RETURN) ijaraga berib bo'lmaydi
-      throw new ApiError(
-        400,
-        'This book is not available for loan at the moment.',
-      );
+    if (awaiting && awaiting.userId === userId) {
+      // Reserver is borrowing their held copy
+      await tx.reservation.update({ where: { id: awaiting.id }, data: { status: 'FULFILLED' } });
+    } else if (bookForLoan && bookForLoan.availableCopies > 0) {
+      // There is at least one free copy; allow general borrowing and decrement pool
+      await tx.book.update({ where: { id: bookId }, data: { availableCopies: { decrement: 1 } } });
+    } else {
+      // No free copies and you are not the reserver with a held copy
+      throw new ApiError(400, 'This book is not available for loan at the moment.');
     }
-
-    await tx.book.update({
-      where: { id: bookId },
-      data: { status: 'BORROWED' },
-    });
 
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
 
-    return tx.loan.create({
+    const created = await tx.loan.create({
       data: { bookId, userId, dueDate, status: 'ACTIVE' },
       include: {
         book: true,
@@ -80,6 +66,9 @@ export const createLoan = async (bookId: string, userId: string) => {
         },
       },
     });
+
+    await recomputeBookStatus(tx as any, bookId);
+    return created;
   });
 };
 
@@ -118,11 +107,6 @@ export const initiateReturn = async (loanId: string, userId: string) => {
         'This loan is already being returned or has been completed.',
       );
     }
-
-    await tx.book.update({
-      where: { id: loan.bookId },
-      data: { status: 'PENDING_RETURN' },
-    });
     const updatedLoan = await tx.loan.update({
       where: { id: loanId },
       data: { status: 'PENDING_RETURN' },
@@ -161,10 +145,6 @@ export const confirmReturn = async (loanId: string) => {
     });
 
     if (firstReservation) {
-      await tx.book.update({
-        where: { id: loan.bookId },
-        data: { status: 'RESERVED' },
-      });
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
       await tx.reservation.update({
@@ -183,16 +163,19 @@ export const confirmReturn = async (loanId: string) => {
         .to(firstReservation.userId)
         .emit('new_notification', newNotification);
     } else {
+      // No waiting reservations: return copy to pool
       await tx.book.update({
         where: { id: loan.bookId },
-        data: { status: 'AVAILABLE' },
+        data: { availableCopies: { increment: 1 } },
       });
     }
 
-    return tx.loan.update({
+    const updated = await tx.loan.update({
       where: { id: loanId },
       data: { status: 'RETURNED', returnedAt: new Date() },
     });
+    await recomputeBookStatus(tx as any, loan.bookId);
+    return updated;
   });
 };
 

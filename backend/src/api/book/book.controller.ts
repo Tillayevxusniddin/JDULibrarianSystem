@@ -117,3 +117,19 @@ export const bulkCreateBooksHandler = asyncHandler(
     });
   },
 );
+
+export const incrementCopiesHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.validatedData!.params;
+    const updated = await bookService.incrementCopies(id);
+    res.status(200).json({ message: 'Copy added.', data: updated });
+  },
+);
+
+export const decrementCopiesHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.validatedData!.params;
+    const updated = await bookService.decrementCopies(id);
+    res.status(200).json({ message: 'Copy removed.', data: updated });
+  },
+);

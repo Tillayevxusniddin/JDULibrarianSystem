@@ -9,16 +9,30 @@ import { getIo } from '../../utils/socket.js';
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
+import { recomputeBookStatus } from '../../utils/bookStatus.js';
 
 export const createBook = async (input: Prisma.BookCreateInput) => {
   if (!input.coverImage) {
     input.coverImage = '/public/uploads/books/default.png';
   }
 
+  // Initialize copy counts
+  const total = (input as any).totalCopies ?? 1;
+  const available = Math.min(
+    (input as any).availableCopies ?? total,
+    total,
+  );
+
+  (input as any).totalCopies = total;
+  (input as any).availableCopies = available;
+
   const newBook = await prisma.book.create({
     data: input,
     include: { category: true },
   });
+
+  // Ensure aggregate status reflects counts and queue
+  await recomputeBookStatus(prisma as any, newBook.id);
 
   const usersToNotify = await prisma.user.findMany({
     where: { role: 'USER' },
@@ -78,7 +92,30 @@ export const findBooks = async (
     prisma.book.count({ where }),
   ]);
 
-  return { data: books, total };
+  // Derive aggregate status on the fly to avoid stale DB values
+  const bookIds = books.map((b) => b.id);
+  if (bookIds.length === 0) return { data: books, total };
+
+  const awaiting = await prisma.reservation.groupBy({
+    by: ['bookId'],
+    where: { bookId: { in: bookIds }, status: 'AWAITING_PICKUP' },
+    _count: { _all: true },
+  });
+  const awaitingMap = new Map<string, number>(
+    awaiting.map((a) => [a.bookId, a._count._all]),
+  );
+
+  const data = books.map((b) => {
+    const hasAwaiting = (awaitingMap.get(b.id) || 0) > 0;
+    const derivedStatus = hasAwaiting
+      ? 'RESERVED'
+      : b.availableCopies > 0
+      ? 'AVAILABLE'
+      : 'BORROWED';
+    return { ...b, status: derivedStatus } as typeof b;
+  });
+
+  return { data, total };
 };
 
 export const findBookById = async (id: string) => {
@@ -106,15 +143,33 @@ export const findBookById = async (id: string) => {
 };
 
 export const updateBook = async (id: string, data: Prisma.BookUpdateInput) => {
+  // Ensure copy constraints if counts are being updated
+  const updateData: any = { ...data };
+  // Status is derived; ignore direct updates to status
+  if (updateData.status !== undefined) {
+    delete updateData.status;
+  }
+  if (updateData.totalCopies !== undefined || updateData.availableCopies !== undefined) {
+    const current = await prisma.book.findUnique({ where: { id }, select: { totalCopies: true, availableCopies: true } });
+    const newTotal = (updateData.totalCopies as number | undefined) ?? current?.totalCopies ?? 1;
+    let newAvailable = (updateData.availableCopies as number | undefined) ?? current?.availableCopies ?? 1;
+    if (newAvailable > newTotal) newAvailable = newTotal;
+    updateData.totalCopies = newTotal;
+    updateData.availableCopies = newAvailable;
+  }
+
   const updatedBook = await prisma.book.update({
     where: { id },
-    data,
+    data: updateData,
     include: { category: true },
   });
 
   const BOOK_CACHE_KEY = `book:${id}`;
   await redisClient.del(BOOK_CACHE_KEY);
   console.log(`Book cache invalidated for ID: ${id}`);
+
+  // Always recompute aggregate status to keep it consistent with counts/queue
+  await recomputeBookStatus(prisma as any, id);
 
   return updatedBook;
 };
@@ -234,8 +289,10 @@ export const reserveBook = async (bookId: string, userId: string) => {
       }
     }
 
-    // 2. Kitobning statusini tekshiramiz
-    if (book.status !== 'AVAILABLE' && book.status !== 'BORROWED') {
+    // 2. Kitobning rezervatsiya uchun holatini tekshiramiz (AVAILABLE/BORROWED/RESERVED holatlarida ruxsat beramiz)
+    if (
+      !['AVAILABLE', 'BORROWED', 'RESERVED'].includes(book.status as any)
+    ) {
       throw new ApiError(400, 'Bu kitobni hozirda band qilib bo`lmaydi.');
     }
 
@@ -252,10 +309,11 @@ export const reserveBook = async (bookId: string, userId: string) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 48);
 
-    if (book.status === 'AVAILABLE') {
+    if (book.availableCopies > 0) {
+      // Copy available now: hold one and set AWAITING_PICKUP
       await tx.book.update({
         where: { id: bookId },
-        data: { status: 'RESERVED' },
+        data: { availableCopies: { decrement: 1 } },
       });
 
       if (existingInactiveReservation) {
@@ -304,8 +362,10 @@ export const reserveBook = async (bookId: string, userId: string) => {
           .to(librarians.map((l) => l.id))
           .emit('refetch_notifications');
       }
+      // Aggregate status becomes RESERVED (at least one awaiting)
+      await recomputeBookStatus(tx, bookId);
     } else {
-      // book.status === 'BORROWED'
+      // No free copies: join the queue as ACTIVE
       if (existingInactiveReservation) {
         reservation = await tx.reservation.update({
           where: { id: existingInactiveReservation.id },
@@ -394,4 +454,50 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
   // --- MANTIQ TUGADI ---
 
   return result;
+};
+
+export const incrementCopies = async (bookId: string) => {
+  return prisma.$transaction(async (tx) => {
+    const book = await tx.book.findUnique({ where: { id: bookId } });
+    if (!book) throw new ApiError(404, 'Book not found.');
+
+    const updated = await tx.book.update({
+      where: { id: bookId },
+      data: {
+        totalCopies: { increment: 1 },
+        availableCopies: { increment: 1 },
+      },
+      include: { category: true },
+    });
+    await recomputeBookStatus(tx as any, bookId);
+    return updated;
+  });
+};
+
+export const decrementCopies = async (bookId: string) => {
+  return prisma.$transaction(async (tx) => {
+    const book = await tx.book.findUnique({ where: { id: bookId } });
+    if (!book) throw new ApiError(404, 'Book not found.');
+
+    if (book.totalCopies <= 1) {
+      throw new ApiError(400, 'Cannot reduce copies below 1.');
+    }
+    if (book.availableCopies <= 0) {
+      throw new ApiError(
+        400,
+        'Cannot remove a copy while all copies are lent out or on hold.',
+      );
+    }
+
+    const updated = await tx.book.update({
+      where: { id: bookId },
+      data: {
+        totalCopies: { decrement: 1 },
+        availableCopies: { decrement: 1 },
+      },
+      include: { category: true },
+    });
+    await recomputeBookStatus(tx as any, bookId);
+    return updated;
+  });
 };

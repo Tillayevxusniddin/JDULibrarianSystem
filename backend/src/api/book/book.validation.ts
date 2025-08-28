@@ -15,6 +15,12 @@ export const createBookSchema = z.object({
     categoryId: z
       .string()
       .uuid({ message: 'Category ID must be a valid UUID' }),
+    totalCopies: z.coerce.number().int().min(1).optional(),
+    availableCopies: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .optional(),
   }),
   query: emptySchema,
   params: emptySchema,
@@ -33,7 +39,8 @@ export const updateBookSchema = z.object({
     publishedYear: z.coerce.number().int().positive().optional(),
     pageCount: z.coerce.number().int().positive().optional(),
     categoryId: z.string().uuid().optional(),
-    status: z.nativeEnum(BookStatus).optional(),
+    totalCopies: z.coerce.number().int().min(1).optional(),
+    availableCopies: z.coerce.number().int().min(0).optional(),
   }),
   query: emptySchema,
 });
@@ -86,6 +93,14 @@ export const getCommentsByBookIdSchema = z.object({
 });
 
 export const reserveBookSchema = z.object({
+  params: z.object({
+    id: z.string().uuid({ message: 'Book ID must be a valid UUID' }),
+  }),
+  query: emptySchema,
+  body: emptySchema,
+});
+
+export const changeCopiesSchema = z.object({
   params: z.object({
     id: z.string().uuid({ message: 'Book ID must be a valid UUID' }),
   }),

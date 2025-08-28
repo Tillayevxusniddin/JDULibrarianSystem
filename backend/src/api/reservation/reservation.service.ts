@@ -2,6 +2,7 @@
 import prisma from '../../config/db.config.js';
 import ApiError from '../../utils/ApiError.js';
 import { getIo as getReservationIo } from '../../utils/socket.js';
+import { recomputeBookStatus } from '../../utils/bookStatus.js';
 
 export const fulfillReservation = async (reservationId: string) => {
   return prisma.$transaction(async (tx) => {
@@ -30,10 +31,8 @@ export const fulfillReservation = async (reservationId: string) => {
       data: { status: 'FULFILLED' },
     });
 
-    await tx.book.update({
-      where: { id: reservation.bookId },
-      data: { status: 'BORROWED' },
-    });
+    // Copy was already held when moving to AWAITING_PICKUP; just recompute status
+    await recomputeBookStatus(tx as any, reservation.bookId);
 
     return newLoan;
   });
@@ -109,10 +108,12 @@ export const cancelReservation = async (
           .to(nextInQueue.userId)
           .emit('new_notification', newNotification);
       } else {
+        // Free the held copy back to pool
         await tx.book.update({
           where: { id: reservation.bookId },
-          data: { status: 'AVAILABLE' },
+          data: { availableCopies: { increment: 1 } },
         });
+        await recomputeBookStatus(tx as any, reservation.bookId);
       }
     }
   });

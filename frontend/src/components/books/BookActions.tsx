@@ -98,17 +98,27 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
 
   if (!user || isCheckingLoan) return <Box className="pt-6 mt-6 border-t"><CircularProgress size={24} /></Box>;
 
+  const canLibrarianLoan = user?.role === 'LIBRARIAN' && (
+    typeof (book as any).availableCopies === 'number'
+      ? (book as any).availableCopies > 0
+      : book.status === 'AVAILABLE'
+  );
+
+  const canUserReserve = user?.role === 'USER' &&
+    (book.status === 'BORROWED' || book.status === 'AVAILABLE' || book.status === 'RESERVED') &&
+    !userLoan;
+
   return (
     <Box className="flex items-center pt-6 mt-6 space-x-2 border-t">
       {loading && <CircularProgress size={24} />}
       
-      {user.role === 'LIBRARIAN' && book.status === 'AVAILABLE' && (
+      {canLibrarianLoan && (
         <Button variant="contained" onClick={() => setOpen(true)} disabled={loading}>
           Ijaraga Berish
         </Button>
       )}
 
-      {user.role === 'USER' && (book.status === 'BORROWED' || book.status === 'AVAILABLE') && !userLoan && (
+      {canUserReserve && (
         <Button variant="contained" color="secondary" onClick={handleReserve} disabled={loading}>
           Band Qilish
         </Button>

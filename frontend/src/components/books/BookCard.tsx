@@ -96,6 +96,11 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
             <Typography variant="body2" sx={{ opacity: 0.8 }}>
               {book.author}
             </Typography>
+            {typeof book.availableCopies === 'number' && typeof book.totalCopies === 'number' && (
+              <Typography variant="caption" sx={{ mt: 0.5, opacity: 0.9 }}>
+                {book.availableCopies}/{book.totalCopies} available
+              </Typography>
+            )}
           </Box>
         </Link>
         

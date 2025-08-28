@@ -11,6 +11,7 @@ import {
   deleteBookSchema,
   getCommentsByBookIdSchema,
   reserveBookSchema,
+  changeCopiesSchema,
 } from './book.validation.js';
 import { upload } from '../../utils/fileUpload.js';
 import * as bookController from './book.controller.js';
@@ -55,6 +56,15 @@ router.use(authenticate);
  *               categoryId:
  *                 type: string
  *                 format: uuid
+  *               totalCopies:
+  *                 type: integer
+  *                 minimum: 1
+  *                 default: 1
+  *                 description: Jami nusxalar soni (multi-copy). Agar kiritilmasa 1.
+  *               availableCopies:
+  *                 type: integer
+  *                 minimum: 0
+  *                 description: Mavjud nusxalar soni. Kiritilmasa totalCopies ga teng bo'ladi.
  *               coverImage:
  *                 type: string
  *                 format: binary
@@ -144,6 +154,14 @@ router.get(
  *                 type: string
  *               author:
  *                 type: string
+  *               totalCopies:
+  *                 type: integer
+  *                 minimum: 1
+  *                 description: Jami nusxalar soni. availableCopies undan oshmaydi.
+  *               availableCopies:
+  *                 type: integer
+  *                 minimum: 0
+  *                 description: Mavjud nusxalar soni (0..totalCopies). Status avtomatik qayta hisoblanadi.
  *               coverImage:
  *                 type: string
  *                 format: binary
@@ -255,6 +273,11 @@ router.get(
  *       - Books
  *     security:
  *       - bearerAuth: []
+  *     description: |
+  *       Multi-copy mantiqi: Agar `availableCopies > 0` bo'lsa, rezervatsiya `AWAITING_PICKUP`
+  *       holatiga o'tadi va bir nusxa ushlab turiladi (48 soat). Aks holda, foydalanuvchi
+  *       `ACTIVE` navbatiga qo'shiladi. Qaytarishda navbatdagiga `AWAITING_PICKUP` beriladi yoki
+  *       navbat yo'q bo'lsa `availableCopies` oshiriladi.
  *     parameters:
  *       - $ref: '#/components/parameters/bookId'
  *     responses:
@@ -276,6 +299,55 @@ router.post(
   authorize(['LIBRARIAN']),
   uploadExcel.single('booksFile'),
   bookController.bulkCreateBooksHandler,
+);
+
+/**
+ * @openapi
+ * /api/v1/books/{id}/copies/increment:
+ *   post:
+ *     summary: Jami/mavjud nusxalarni bitta donaga oshirish (Faqat kutubxonachi)
+ *     tags:
+ *       - Books
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/bookId'
+ *     responses:
+ *       '200':
+ *         description: Nusxa qo'shildi
+ */
+router.post(
+  '/:id/copies/increment',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  validate(changeCopiesSchema),
+  bookController.incrementCopiesHandler,
+);
+
+/**
+ * @openapi
+ * /api/v1/books/{id}/copies/decrement:
+ *   post:
+ *     summary: Jami/mavjud nusxalarni bitta donaga kamaytirish (Faqat kutubxonachi)
+ *     description: Faqat mavjud (iqaraga berilmagan/bandal holatda bo'lmagan) nusxa bo'lsa kamaytiriladi va umumiy son 1 dan kam bo'lmaydi.
+ *     tags:
+ *       - Books
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/bookId'
+ *     responses:
+ *       '200':
+ *         description: Nusxa olib tashlandi
+ *       '400':
+ *         description: Nusxani kamaytirib bo'lmadi (band/ijarada) yoki minimal chegaraga yetgan
+ */
+router.post(
+  '/:id/copies/decrement',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  validate(changeCopiesSchema),
+  bookController.decrementCopiesHandler,
 );
 
 export default router;
