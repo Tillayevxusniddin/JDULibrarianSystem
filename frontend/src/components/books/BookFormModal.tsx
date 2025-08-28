@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, Typography, Box } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, Typography, Box, FormHelperText } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import api from '../../api';
 import type { Book, Category } from '../../types';
@@ -21,6 +21,8 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
   const [categories, setCategories] = useState<Category[]>([]);
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [newCategoryMode, setNewCategoryMode] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const isEditing = book !== null;
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
 
@@ -54,12 +56,23 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       }); // <-- ISBN'ni bo'shatish
     }
     setCoverImage(null);
+    setNewCategoryMode(false);
+    setNewCategoryName('');
   }, [book, open]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<any>,
   ) => {
     const { name, value } = e.target as HTMLInputElement;
+    if (name === 'categoryId') {
+      if (value === '__create__') {
+        setNewCategoryMode(true);
+        setFormData({ ...formData, categoryId: '' });
+        return;
+      } else {
+        setNewCategoryMode(false);
+      }
+    }
     if (name === 'totalCopies' || name === 'availableCopies') {
       const num = value === '' ? '' : Math.max(0, Math.floor(Number(value)));
       const draft = { ...formData, [name]: num } as any;
@@ -82,6 +95,19 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
   const handleSubmit = async () => {
     setLoading(true);
     const data = new FormData();
+    let resolvedCategoryId = formData.categoryId as string | undefined;
+
+    // If user chose to create a new category, create it first
+    if (newCategoryMode && newCategoryName.trim()) {
+      try {
+        const resp = await api.post<Category>('/categories', { name: newCategoryName.trim() });
+        resolvedCategoryId = resp.data.id;
+      } catch (err: any) {
+        setLoading(false);
+        const msg = err?.response?.data?.message || 'Kategoriyani yaratishda xatolik.';
+        return toast.error(msg);
+      }
+    }
     // Normalize copy counts before sending
     const total = Number(formData.totalCopies ?? 1) || 1;
     let available = Number(formData.availableCopies ?? total) || total;
@@ -91,6 +117,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       ...formData,
       totalCopies: total,
       availableCopies: available,
+      categoryId: resolvedCategoryId,
     };
 
     // Faqat bo'sh bo'lmagan maydonlarni yuboramiz
@@ -158,9 +185,21 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
           </Box>
           <FormControl fullWidth>
             <InputLabel>Kategoriya</InputLabel>
-            <Select name="categoryId" value={formData.categoryId || ''} label="Kategoriya" onChange={handleChange}>
+            <Select name="categoryId" value={newCategoryMode ? '__create__' : (formData.categoryId || '')} label="Kategoriya" onChange={handleChange}>
+              <MenuItem value="__create__">+ Yangi kategoriya qo'shish</MenuItem>
               {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}
             </Select>
+            {newCategoryMode && (
+              <Box sx={{ mt: 1 }}>
+                <TextField
+                  label="Yangi kategoriya nomi"
+                  fullWidth
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                />
+                <FormHelperText>Saqlash tugmasini bosganda kategoriya yaratiladi</FormHelperText>
+              </Box>
+            )}
           </FormControl>
           <TextField name="description" label="Tavsif" value={formData.description || ''} onChange={handleChange} fullWidth multiline rows={4} />
           <Box>
