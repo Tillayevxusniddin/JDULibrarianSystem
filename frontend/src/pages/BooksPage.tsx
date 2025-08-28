@@ -171,6 +171,7 @@ const BooksPage: React.FC = () => {
             open={isModalOpen}
             onClose={() => setIsModalOpen(false)}
             onSuccess={handleSuccess}
+            onCreated={fetchBooks}
             book={selectedBook}
           />
           <BulkBookUploadModal

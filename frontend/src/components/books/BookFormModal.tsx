@@ -13,10 +13,11 @@ interface BookFormModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onCreated?: () => void; // called when saving and adding another
   book: Book | null;
 }
 
-const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess, book }) => {
+const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess, onCreated, book }) => {
   const [formData, setFormData] = useState<any>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [coverImage, setCoverImage] = useState<File | null>(null);
@@ -92,7 +93,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (addAnother: boolean = false) => {
     setLoading(true);
     const data = new FormData();
     let resolvedCategoryId = formData.categoryId as string | undefined;
@@ -140,7 +141,29 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
         toast.success('Kitob muvaffaqiyatli yaratildi!');
         fetchNotifications(); 
       }
-      onSuccess();
+      // If addAnother, do not notify parent to close; just refresh parent list if provided
+      if (!isEditing && addAnother) {
+        if (onCreated) onCreated();
+      } else {
+        onSuccess();
+      }
+      if (!isEditing && addAnother) {
+        // Reset the form for next entry, but keep the selected/created category
+        setFormData({
+          title: '',
+          author: '',
+          description: '',
+          categoryId: resolvedCategoryId || '',
+          isbn: '',
+          totalCopies: 1,
+          availableCopies: 1,
+        });
+        setCoverImage(null);
+        setNewCategoryMode(false);
+        setNewCategoryName('');
+        return; // keep modal open
+      }
+      onClose();
     } catch (error: any) {
       const message = error.response?.data?.message || "Kitobni saqlashda xatolik yuz berdi.";
       toast.error(message);
@@ -148,6 +171,19 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       setLoading(false);
     }
   };
+
+  // Ctrl+Enter keyboard shortcut for "Save and Add Another" in create mode
+  useEffect(() => {
+    if (!open || isEditing) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!loading) void handleSubmit(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, isEditing, loading, formData, newCategoryMode, newCategoryName]);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -211,9 +247,14 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
+      <DialogActions sx={{ p: '16px 24px', gap: 1 }}>
         <Button onClick={onClose}>Bekor qilish</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        {!isEditing && (
+          <Button onClick={() => handleSubmit(true)} variant="outlined" disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : 'Saqlash va Yana qo\'shish'}
+          </Button>
+        )}
+        <Button onClick={() => handleSubmit(false)} variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={24} /> : "Saqlash"}
         </Button>
       </DialogActions>
