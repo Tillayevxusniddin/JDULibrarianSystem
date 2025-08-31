@@ -20,7 +20,7 @@ const BooksPage: React.FC = () => {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ search: '', categoryId: '' });
+  const [filters, setFilters] = useState({ search: '', categoryId: '', availability: '' });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -37,7 +37,13 @@ const BooksPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await api.get<PaginatedResponse<Book>>('/books', {
-        params: { page, limit: 12, search: filters.search || undefined, categoryId: filters.categoryId || undefined },
+        params: { 
+            page, 
+            limit: 12, 
+            search: filters.search || undefined, 
+            categoryId: filters.categoryId || undefined,
+            availability: filters.availability || undefined
+        },
       });
       setBooks(response.data.data);
       setTotalPages(response.data.meta.totalPages);
@@ -48,13 +54,13 @@ const BooksPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters.search, filters.categoryId, filters.availability]);
 
   useEffect(() => {
     fetchBooks();
   }, [fetchBooks]);
 
-  const handleFilterChange = useCallback((newFilters: { search: string; categoryId: string }) => {
+  const handleFilterChange = useCallback((newFilters: { search: string; categoryId: string; availability: string }) => {
     setPage(1);
     setFilters(newFilters);
   }, []);

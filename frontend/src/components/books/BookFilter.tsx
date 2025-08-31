@@ -1,70 +1,62 @@
-import React, { useState, useEffect } from 'react';
+// src/components/books/BookFilter.tsx
+
+import React, { useState, useEffect, useRef } from 'react'; // useRef'ni import qilamiz
 import { TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import api from '../../api';
 import type { Category } from '../../types';
 
 interface BookFilterProps {
-  onFilterChange: (filters: { search: string; categoryId: string }) => void;
+  onFilterChange: (filters: { search: string; categoryId: string; availability: string }) => void;
 }
 
 const BookFilter: React.FC<BookFilterProps> = ({ onFilterChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [availability, setAvailability] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // Komponent ilk bor ishga tushganda kategoriyalar ro'yxatini olamiz
+  // --- O'ZGARISH: "Bayroqcha" yaratamiz ---
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     api.get('/categories').then(response => {
       setCategories(response.data);
     });
   }, []);
 
-  // Har safar qidiruv yoki filtr o'zgarganda, asosiy sahifaga xabar beramiz
   useEffect(() => {
-    // Foydalanuvchi yozishni tugatishini kutish uchun kichik pauza (debounce)
+    // --- O'ZGARISH: Birinchi renderda bu qismni o'tkazib yuboramiz ---
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const timer = setTimeout(() => {
-      onFilterChange({ search: searchTerm, categoryId: selectedCategory });
+      onFilterChange({ search: searchTerm, categoryId: selectedCategory, availability });
     }, 500); // 500 millisekund
 
     return () => clearTimeout(timer);
-  }, [searchTerm, selectedCategory, onFilterChange]);
+  }, [searchTerm, selectedCategory, availability, onFilterChange]);
 
   return (
-    <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Qidiruv maydoni */}
-        <div>
-          <TextField
-            fullWidth
-            label="Sarlavha yoki muallif bo'yicha qidiruv"
-            variant="outlined"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        
-        {/* Kategoriya tanlash */}
-        <div>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Kategoriya bo'yicha filtrlash</InputLabel>
-            <Select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              label="Kategoriya bo'yicha filtrlash"
-              className="w-full"
-            >
-              <MenuItem value="">
-                <em>Barcha Kategoriyalar</em>
-              </MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </div>
+    <div className="p-4 mb-6 bg-white rounded-lg shadow-md">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <TextField fullWidth label="Qidiruv" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <FormControl fullWidth>
+          <InputLabel>Kategoriya</InputLabel>
+          <Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} label="Kategoriya">
+            <MenuItem value=""><em>Barchasi</em></MenuItem>
+            {categories.map((cat) => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth>
+          <InputLabel>Mavjudligi</InputLabel>
+          <Select value={availability} onChange={(e) => setAvailability(e.target.value)} label="Mavjudligi">
+            <MenuItem value=""><em>Barchasi</em></MenuItem>
+            <MenuItem value="available">Mavjud</MenuItem>
+            <MenuItem value="borrowed">Band</MenuItem>
+          </Select>
+        </FormControl>
       </div>
     </div>
   );

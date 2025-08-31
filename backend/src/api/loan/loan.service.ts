@@ -1,80 +1,98 @@
-// src/api/loan/loan.service.ts
-
 import prisma from '../../config/db.config.js';
-import { ReservationStatus } from '@prisma/client';
 import ApiError from '../../utils/ApiError.js';
-import { NotificationType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import redisClient from '@/config/redis.config.js';
+import {
+  NotificationType,
+  BookCopyStatus,
+  LoanStatus,
+  ReservationStatus,
+} from '@prisma/client';
 import { getIo } from '../../utils/socket.js';
 
-export const createLoan = async (bookId: string, userId: string) => {
-  const BORROWING_LIMIT = 5;
+/**
+ * Kitob nusxasini shtrix-kodi bo'yicha ijaraga beradi.
+ * @param barcode - Ijaraga berilayotgan jismoniy nusxaning shtrix-kodi
+ * @param userId - Ijaraga olayotgan foydalanuvchining IDsi
+ */
+export const createLoan = async (barcode: string, userId: string) => {
+  const BORROWING_LIMIT = 3;
 
   return prisma.$transaction(async (tx) => {
+    // 1. Foydalanuvchining shaxsiy cheklovlarini tekshirish
     const activeLoansCount = await tx.loan.count({
-      where: { userId: userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE' },
     });
-
     if (activeLoansCount >= BORROWING_LIMIT) {
       throw new ApiError(
         400,
-        `You can only borrow up to ${BORROWING_LIMIT} books at a time.`,
+        `Siz ${BORROWING_LIMIT} tagacha kitob olishingiz mumkin.`,
       );
     }
-
     const overdueLoan = await tx.loan.findFirst({
-      where: { userId: userId, status: 'OVERDUE' },
+      where: { userId, status: 'OVERDUE' },
     });
-
     if (overdueLoan) {
+      throw new ApiError(400, "Muddati o'tgan kitobingiz bor. Uni qaytaring.");
+    }
+
+    // 2. Shtrix-kod bo'yicha kitobning jismoniy nusxasini topamiz
+    const bookCopy = await tx.bookCopy.findUnique({ where: { barcode } });
+    if (!bookCopy) {
       throw new ApiError(
-        400,
-        'You have an overdue book. Please return it to borrow a new one.',
+        404,
+        'Bunday shtrix-kodga ega kitob nusxasi topilmadi.',
       );
     }
 
-    const book = await tx.book.findUnique({ where: { id: bookId } });
-    if (!book) {
-      throw new ApiError(404, 'Book with this ID was not found.');
+    await redisClient.del(`book:${bookCopy.bookId}`);
+
+    // 3. Nusxaning holatini tekshirish
+    if (bookCopy.status === BookCopyStatus.BORROWED) {
+      throw new ApiError(400, 'Bu nusxa allaqachon ijaraga berilgan.');
+    }
+    if (bookCopy.status === BookCopyStatus.LOST) {
+      throw new ApiError(400, "Bu nusxa yo'qolgan deb belgilangan.");
     }
 
-    if (book.status === 'RESERVED') {
-      // Agar kitob band qilingan bo'lsa, faqat kerakli odamga beramiz
+    // Agar nusxa 'AVAILABLE' bo'lmasa, demak u 'MAINTENANCE' (rezervdagi) holatida.
+    // U aynan shu foydalanuvchi uchun band qilinganini tekshiramiz.
+    if (bookCopy.status === BookCopyStatus.MAINTENANCE) {
       const reservation = await tx.reservation.findFirst({
-        where: { bookId, status: 'AWAITING_PICKUP' },
+        where: {
+          userId,
+          assignedCopyId: bookCopy.id,
+          status: ReservationStatus.AWAITING_PICKUP,
+        },
       });
-
-      if (!reservation || reservation.userId !== userId) {
+      if (!reservation) {
         throw new ApiError(
           400,
-          'This book is currently reserved for another user.',
+          `Bu nusxa boshqa foydalanuvchi uchun band qilingan.`,
         );
       }
-
-      // Rezervatsiyani bajarilgan deb belgilaymiz
+      // Agar topilsa, rezervatsiyani bajarilgan deb belgilaymiz
       await tx.reservation.update({
         where: { id: reservation.id },
-        data: { status: 'FULFILLED' },
+        data: { status: ReservationStatus.FULFILLED },
       });
-    } else if (book.status !== 'AVAILABLE') {
-      // Boshqa har qanday holatda (BORROWED, PENDING_RETURN) ijaraga berib bo'lmaydi
-      throw new ApiError(
-        400,
-        'This book is not available for loan at the moment.',
-      );
     }
 
-    await tx.book.update({
-      where: { id: bookId },
-      data: { status: 'BORROWED' },
+    // 4. Barcha tekshiruvlardan so'ng, nusxaning statusini 'BORROWED'ga o'zgartiramiz.
+    // BU YERDA XATO BO'LMASLIGI SHART!
+    await tx.bookCopy.update({
+      where: { id: bookCopy.id },
+      data: { status: BookCopyStatus.BORROWED },
     });
 
+    // 5. Yangi ijara yozuvini yaratamiz
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
 
     return tx.loan.create({
-      data: { bookId, userId, dueDate, status: 'ACTIVE' },
+      data: { userId, bookCopyId: bookCopy.id, dueDate, status: 'ACTIVE' },
       include: {
-        book: true,
+        bookCopy: { include: { book: true } },
         user: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
@@ -82,47 +100,74 @@ export const createLoan = async (bookId: string, userId: string) => {
     });
   });
 };
+/**
+ * Foydalanuvchining barcha ijralarini topadi.
+ */
+export const findUserLoans = async (
+  userId: string,
+  statusFilter?: 'active' | 'history',
+) => {
+  const where: Prisma.LoanWhereInput = { userId };
 
-export const findUserLoans = async (userId: string) => {
-  return prisma.loan.findMany({
-    where: { userId },
-    include: { book: true },
-    orderBy: { borrowedAt: 'desc' },
-  });
-};
+  if (statusFilter === 'active') {
+    where.status = { in: ['ACTIVE', 'OVERDUE', 'PENDING_RETURN'] };
+  } else if (statusFilter === 'history') {
+    where.status = { in: ['RETURNED'] };
+  }
 
-export const findAllLoans = async () => {
   return prisma.loan.findMany({
+    where,
     include: {
-      book: true,
-      user: {
-        select: { id: true, firstName: true, lastName: true, email: true },
-      },
+      bookCopy: { include: { book: true } },
     },
     orderBy: { borrowedAt: 'desc' },
   });
 };
 
+/**
+ * Barcha ijralar ro'yxatini oladi.
+ */
+export const findAllLoans = async (filter?: 'pending' | 'renewal' | 'active' | 'history') => {
+  const where: Prisma.LoanWhereInput = {};
+
+  if (filter === 'pending') where.status = 'PENDING_RETURN';
+  else if (filter === 'renewal') where.renewalRequested = true;
+  else if (filter === 'active') where.status = { in: ['ACTIVE', 'OVERDUE'] };
+  else if (filter === 'history') where.status = 'RETURNED';
+
+  return prisma.loan.findMany({
+    where,
+    include: {
+      bookCopy: { include: { book: true } },
+      user: { select: { id: true, firstName: true, lastName: true, email: true } },
+    },
+    orderBy: { borrowedAt: 'desc' },
+  });
+};
+
+/**
+ * Foydalanuvchi kitobni qaytarishni boshlaydi (tasdiqlash uchun)
+ */
 export const initiateReturn = async (loanId: string, userId: string) => {
   return prisma.$transaction(async (tx) => {
     const loan = await tx.loan.findUnique({
       where: { id: loanId },
-      include: { user: true, book: true },
+      include: { user: true, bookCopy: { include: { book: true } } },
     });
-    if (!loan) throw new ApiError(404, 'Loan not found.');
+    if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
     if (loan.userId !== userId)
-      throw new ApiError(403, 'You can only return your own loans.');
-    if (loan.status !== 'ACTIVE' && loan.status !== 'OVERDUE') {
       throw new ApiError(
-        400,
-        'This loan is already being returned or has been completed.',
+        403,
+        "Faqat o'zingizga tegishli ijarani qaytara olasiz.",
       );
-    }
+    if (!['ACTIVE', 'OVERDUE'].includes(loan.status))
+      throw new ApiError(400, "Bu ijarani qaytarib bo'lmaydi.");
 
-    await tx.book.update({
-      where: { id: loan.bookId },
-      data: { status: 'PENDING_RETURN' },
+    await tx.bookCopy.update({
+      where: { id: loan.bookCopyId },
+      data: { status: BookCopyStatus.MAINTENANCE },
     });
+
     const updatedLoan = await tx.loan.update({
       where: { id: loanId },
       data: { status: 'PENDING_RETURN' },
@@ -131,12 +176,11 @@ export const initiateReturn = async (loanId: string, userId: string) => {
     const librarians = await tx.user.findMany({ where: { role: 'LIBRARIAN' } });
     const notificationData = librarians.map((lib) => ({
       userId: lib.id,
-      message: `Foydalanuvchi ${loan.user.firstName} "${loan.book.title}" kitobini qaytarish uchun belgiladi.`,
+      message: `Foydalanuvchi ${loan.user.firstName} "${loan.bookCopy.book.title}" kitobini qaytarish uchun belgiladi.`,
       type: NotificationType.INFO,
     }));
     await tx.notification.createMany({ data: notificationData });
 
-    // Socket orqali kutubxonachilarga signal yuborish
     getIo()
       .to(librarians.map((l) => l.id))
       .emit('refetch_notifications');
@@ -145,47 +189,59 @@ export const initiateReturn = async (loanId: string, userId: string) => {
   });
 };
 
+/**
+ * Kutubxonachi kitob qaytarilganini tasdiqlaydi.
+ */
 export const confirmReturn = async (loanId: string) => {
   return prisma.$transaction(async (tx) => {
     const loan = await tx.loan.findUnique({
       where: { id: loanId },
+      include: { bookCopy: true },
+    });
+    if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
+    await redisClient.del(`book:${loan.bookCopy.bookId}`);
+
+    if (loan.status !== 'PENDING_RETURN')
+      throw new ApiError(400, 'Bu ijara qaytarish uchun belgilanmagan.');
+
+    const bookId = loan.bookCopy.bookId;
+
+    const nextInQueue = await tx.reservation.findFirst({
+      where: { bookId, status: 'ACTIVE' },
+      orderBy: { reservedAt: 'asc' },
       include: { book: true },
     });
-    if (!loan) throw new ApiError(404, 'Loan not found.');
-    if (loan.status !== 'PENDING_RETURN')
-      throw new ApiError(400, 'This loan has not been marked for return.');
 
-    const firstReservation = await tx.reservation.findFirst({
-      where: { bookId: loan.bookId, status: 'ACTIVE' },
-      orderBy: { reservedAt: 'asc' },
-    });
-
-    if (firstReservation) {
-      await tx.book.update({
-        where: { id: loan.bookId },
-        data: { status: 'RESERVED' },
-      });
+    if (nextInQueue) {
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
+      expiresAt.setHours(expiresAt.getHours() + 48);
       await tx.reservation.update({
-        where: { id: firstReservation.id },
-        data: { status: 'AWAITING_PICKUP', expiresAt: expiresAt },
+        where: { id: nextInQueue.id },
+        data: {
+          status: 'AWAITING_PICKUP',
+          assignedCopyId: loan.bookCopyId,
+          expiresAt,
+        },
       });
+
+      await tx.bookCopy.update({
+        where: { id: loan.bookCopyId },
+        data: { status: BookCopyStatus.MAINTENANCE }, // Olib ketish kutilayotgan holatga o'tadi
+      });
+
       const newNotification = await tx.notification.create({
         data: {
-          userId: firstReservation.userId,
-          message: `Siz navbatda turgan "${loan.book.title}" kitobi bo'shadi! Uni 24 soat ichida olib keting.`,
+          userId: nextInQueue.userId,
+          message: `Siz navbatda turgan "${nextInQueue.book.title}" kitobi bo'shadi! Uni 48 soat ichida olib keting.`,
           type: 'RESERVATION_AVAILABLE',
         },
       });
-      // Socket orqali navbatdagi foydalanuvchiga xabar yuborish
-      getIo()
-        .to(firstReservation.userId)
-        .emit('new_notification', newNotification);
+
+      getIo().to(nextInQueue.userId).emit('new_notification', newNotification);
     } else {
-      await tx.book.update({
-        where: { id: loan.bookId },
-        data: { status: 'AVAILABLE' },
+      await tx.bookCopy.update({
+        where: { id: loan.bookCopyId },
+        data: { status: BookCopyStatus.AVAILABLE },
       });
     }
 
@@ -196,21 +252,24 @@ export const confirmReturn = async (loanId: string) => {
   });
 };
 
+/**
+ * Foydalanuvchi ijara muddatini uzaytirishni so'raydi
+ */
 export const requestRenewal = async (loanId: string, userId: string) => {
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
-    include: { user: true, book: true },
+    include: { user: true, bookCopy: { include: { book: true } } },
   });
-  if (!loan) throw new ApiError(404, 'Loan not found.');
+  if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
   if (loan.userId !== userId)
-    throw new ApiError(403, 'You can only request renewal for your own loans.');
+    throw new ApiError(403, "Faqat o'z ijarangiz uchun so'rov yubora olasiz.");
   if (loan.status !== 'ACTIVE')
-    throw new ApiError(400, 'Only active loans can be renewed.');
-  if (loan.renewalRequested)
     throw new ApiError(
       400,
-      'You have already requested a renewal for this loan.',
+      'Faqat aktiv ijaralar muddatini uzaytirish mumkin.',
     );
+  if (loan.renewalRequested)
+    throw new ApiError(400, "Bu ijara uchun allaqachon so'rov yuborilgan.");
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },
@@ -222,12 +281,10 @@ export const requestRenewal = async (loanId: string, userId: string) => {
   });
   const notificationData = librarians.map((lib) => ({
     userId: lib.id,
-    message: `Foydalanuvchi ${loan.user.firstName} "${loan.book.title}" kitobi uchun muddat uzaytirishni so'radi.`,
+    message: `Foydalanuvchi ${loan.user.firstName} "${loan.bookCopy.book.title}" kitobi uchun muddat uzaytirishni so'radi.`,
     type: NotificationType.INFO,
   }));
   await prisma.notification.createMany({ data: notificationData });
-
-  // Socket orqali kutubxonachilarga signal yuborish
   getIo()
     .to(librarians.map((l) => l.id))
     .emit('refetch_notifications');
@@ -235,14 +292,17 @@ export const requestRenewal = async (loanId: string, userId: string) => {
   return updatedLoan;
 };
 
+/**
+ * Kutubxonachi muddatni uzaytirishni tasdiqlaydi
+ */
 export const approveRenewal = async (loanId: string) => {
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
-    include: { book: true },
+    include: { bookCopy: { include: { book: true } } },
   });
-  if (!loan) throw new ApiError(404, 'Loan not found.');
+  if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
   if (!loan.renewalRequested)
-    throw new ApiError(400, 'A renewal has not been requested for this loan.');
+    throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
 
   const newDueDate = new Date(loan.dueDate);
   newDueDate.setDate(newDueDate.getDate() + 14);
@@ -255,24 +315,26 @@ export const approveRenewal = async (loanId: string) => {
   const newNotification = await prisma.notification.create({
     data: {
       userId: loan.userId,
-      message: `Sizning "${loan.book.title}" kitobi uchun muddat uzaytirish so'rovingiz tasdiqlandi.`,
+      message: `Sizning "${loan.bookCopy.book.title}" kitobi uchun muddat uzaytirish so'rovingiz tasdiqlandi.`,
       type: 'INFO',
     },
   });
-  // Socket orqali foydalanuvchiga xabar yuborish
   getIo().to(loan.userId).emit('new_notification', newNotification);
 
   return updatedLoan;
 };
 
+/**
+ * Kutubxonachi muddatni uzaytirishni rad etadi
+ */
 export const rejectRenewal = async (loanId: string) => {
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
-    include: { book: true },
+    include: { bookCopy: { include: { book: true } } },
   });
-  if (!loan) throw new ApiError(404, 'Loan not found.');
+  if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
   if (!loan.renewalRequested)
-    throw new ApiError(400, 'A renewal has not been requested for this loan.');
+    throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },
@@ -282,11 +344,10 @@ export const rejectRenewal = async (loanId: string) => {
   const newNotification = await prisma.notification.create({
     data: {
       userId: loan.userId,
-      message: `Afsuski, sizning "${loan.book.title}" kitobi uchun muddat uzaytirish so'rovingiz rad etildi.`,
+      message: `Afsuski, sizning "${loan.bookCopy.book.title}" kitobi uchun muddat uzaytirish so'rovingiz rad etildi.`,
       type: 'WARNING',
     },
   });
-  // Socket orqali foydalanuvchiga xabar yuborish
   getIo().to(loan.userId).emit('new_notification', newNotification);
 
   return updatedLoan;

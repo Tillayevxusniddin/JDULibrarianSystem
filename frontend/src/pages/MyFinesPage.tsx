@@ -55,9 +55,14 @@ const MyFinesPage: React.FC = () => {
                 {fines.map((fine) => (
                   <TableRow key={fine.id} hover>
                     <TableCell>
-                      <Link to={`/books/${fine.loan.book.id}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 500 }}>
-                        {fine.loan.book.title}
-                      </Link>
+                      {/* --- O'ZGARISH: Murojaat yo'li yangilandi + optional chaining --- */}
+                      {fine.loan ? (
+                        <Link to={`/books/${fine.loan.bookCopy.book.id}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 500 }}>
+                          {fine.loan.bookCopy.book.title}
+                        </Link>
+                      ) : (
+                        'Ijaraga bog\'lanmagan'
+                      )}
                     </TableCell>
                     <TableCell>{fine.reason}</TableCell>
                     <TableCell>{fine.amount.toLocaleString()} so'm</TableCell>

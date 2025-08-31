@@ -118,7 +118,7 @@ const router = createBrowserRouter([
       {
         path: '/manager-panel',
         // Bu yerga keyinroq ManagerRoute qo'yamiz, hozircha LibrarianRoute ishlatib turamiz
-        element: <ManagerRoute />, // VAQTINCHALIK (yoki MANAGER uchun alohida route guard yarating)
+        element: <ManagerRoute />, 
         children: [{ path: '', element: <ManagerPage /> }],
       },
       { path: '/my-reservations', element: <MyReservationsPage /> 

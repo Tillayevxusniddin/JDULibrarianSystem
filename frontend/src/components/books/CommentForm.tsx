@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, Rating, Typography } from '@mui/material';
 import { useAuthStore } from '../../store/auth.store';
 import api from '../../api';
-import type { Comment } from '../../types';
+import type { BookComment } from '../../types';
 import toast from 'react-hot-toast'; // <-- IMPORT QILINDI
 
 interface CommentFormProps {
   bookId: string;
-  onCommentPosted: (newComment: Comment) => void;
+  onCommentPosted: (newComment: BookComment) => void;
 }
 
 const CommentForm: React.FC<CommentFormProps> = ({ bookId, onCommentPosted }) => {
@@ -22,7 +22,7 @@ const CommentForm: React.FC<CommentFormProps> = ({ bookId, onCommentPosted }) =>
       return;
     }
     try {
-      const response = await api.post<Comment>(`/books/${bookId}/comments`, {
+      const response = await api.post<BookComment>(`/books/${bookId}/comments`, {
         comment,
         rating,
       });

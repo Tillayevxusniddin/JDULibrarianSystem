@@ -47,9 +47,10 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ fontWeight: 'bold' }}>Kitoblarni Excel Orqali Qo'shish</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Kitoblarni ommaviy qo'shish uchun, iltimos, kerakli ustunlarga ega Excel faylini yuklang.
-          Majburiy ustunlar: <strong>title, author, category</strong>. Ixtiyoriy: <strong>isbn, description, ...</strong>
+       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Kitoblarni ommaviy qo'shish uchun Excel faylini yuklang. Har bir qator bitta kitob nomini bildiradi.
+          Majburiy ustunlar: <strong>title, category, barcodes</strong>.
+          "barcodes" ustuniga har bir nusxaning shtrix-kodini vergul (,) bilan ajratib yozing.
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
           <Link href="/templates/books_template.xlsx" download>

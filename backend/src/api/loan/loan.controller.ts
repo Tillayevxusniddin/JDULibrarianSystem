@@ -1,11 +1,14 @@
+// src/api/loan/loan.controller.ts
+
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import * as loanService from './loan.service.js';
 
 export const createLoanHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { bookId, userId } = req.validatedData!.body;
-    const loan = await loanService.createLoan(bookId, userId);
+    // --- O'ZGARISH: bookId -> barcode ---
+    const { barcode, userId } = req.validatedData!.body;
+    const loan = await loanService.createLoan(barcode, userId);
     res.status(201).json(loan);
   },
 );
@@ -13,14 +16,18 @@ export const createLoanHandler = asyncHandler(
 export const getMyLoansHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user!.id;
-    const loans = await loanService.findUserLoans(userId);
+    // --- O'ZGARISH: Frontenddan kelgan 'status' filtrini servisga uzatamiz ---
+    const { status } = req.validatedData!.query;
+    const loans = await loanService.findUserLoans(userId, status);
     res.status(200).json(loans);
   },
 );
 
 export const getAllLoansHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const loans = await loanService.findAllLoans();
+    // --- O'ZGARISH: Frontenddan kelgan 'filter'ni servisga uzatamiz ---
+    const { filter } = req.validatedData!.query;
+    const loans = await loanService.findAllLoans(filter);
     res.status(200).json(loans);
   },
 );

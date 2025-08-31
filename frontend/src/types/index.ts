@@ -1,4 +1,3 @@
-// Foydalanuvchi roli
 export type UserRole = 'LIBRARIAN' | 'USER' | 'MANAGER';
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 export type SuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -8,7 +7,6 @@ export type NotificationType =
   | 'WARNING'
   | 'FINE'
   | 'RESERVATION_AVAILABLE';
-
 export type ReservationStatus =
   | 'ACTIVE'
   | 'AWAITING_PICKUP'
@@ -16,16 +14,9 @@ export type ReservationStatus =
   | 'EXPIRED'
   | 'CANCELLED';
 
-// Kitob statuslari
-export type BookStatus =
-  | 'AVAILABLE'
-  | 'BORROWED'
-  | 'RESERVED'
-  | 'PENDING_RETURN'
-  | 'MAINTENANCE';
+export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST';
 
 // --- INTERFEYSLAR ---
-
 export interface Category {
   id: string;
   name: string;
@@ -44,31 +35,63 @@ export interface BookComment {
   };
 }
 
+// --- YANGI INTERFEYS ---
+// Har bir jismoniy kitob nusxasi uchun
+export interface BookCopy {
+  id: string;
+  barcode: string;
+  status: BookCopyStatus;
+  bookId: string;
+  // Ba'zan backend bu ma'lumotni ham qo'shib berishi mumkin
+  book?: {
+    id: string;
+    title: string;
+    coverImage?: string;
+  };
+}
+
+// --- O'ZGARTIRILDI ---
+// Book interfeysi endi "pasport" ma'lumotlarini va nusxalar ro'yxatini saqlaydi
 export interface Book {
   id: string;
   title: string;
-  author: string;
+  author: string | null; // Muallif ixtiyoriy bo'ldi
   description?: string;
   coverImage?: string;
-  status: BookStatus;
   category: Category;
   isbn?: string;
-  comments?: BookComment[]; // <-- TUZATISH: Nomi "comments"ga qaytarildi
+  comments?: BookComment[];
+
+  // Backend bu ma'lumotlarni virtual hisoblab beradi
+  totalCopies: number;
+  availableCopies: number;
+
+  // Kitobning barcha jismoniy nusxalari ro'yxati
+  copies: BookCopy[];
 }
 
+// --- O'ZGARTIRILDI ---
+// Loan interfeysi endi BookCopy'ga bog'lanadi
 export interface Loan {
   id: string;
-  bookId: string;
   userId: string;
+  bookCopyId: string; // bookId o'rniga
   status: LoanStatus;
   borrowedAt: string;
   dueDate: string;
   returnedAt?: string;
   renewalRequested: boolean;
-  book: {
+
+  // Endi zanjir quyidagicha bo'ladi: Loan -> BookCopy -> Book
+  bookCopy: {
     id: string;
-    title: string;
+    barcode: string;
+    book: {
+      id: string;
+      title: string;
+    };
   };
+
   user: {
     id: string;
     firstName: string;
@@ -86,7 +109,6 @@ export interface User {
   createdAt: string;
   profilePicture?: string;
   isPremium: boolean;
-  bookComments?: BookComment[]; // Bu nom to'g'ri, chunki Prisma sxemasida shunday nom berganmiz
 }
 
 export interface Suggestion {
@@ -103,6 +125,8 @@ export interface Suggestion {
   };
 }
 
+// --- O'ZGARTIRILDI ---
+// Fine interfeysi ham Loan orqali BookCopy'ga bog'lanadi
 export interface Fine {
   id: string;
   amount: number;
@@ -115,10 +139,14 @@ export interface Fine {
     firstName: string;
     lastName: string;
   };
-  loan: {
-    book: {
-      id: string;
-      title: string;
+  loan?: {
+    // Jarima ijaraga bog'liq bo'lmasligi ham mumkin
+    bookCopy: {
+      barcode: string;
+      book: {
+        id: string;
+        title: string;
+      };
     };
   };
 }
@@ -131,17 +159,20 @@ export interface Notification {
   createdAt: string;
 }
 
+// --- O'ZGARTIRILDI ---
+// Reservation'ga nusxa tayinlanganini bilish uchun maydon qo'shildi
 export interface Reservation {
   id: string;
   status: ReservationStatus;
   reservedAt: string;
   expiresAt?: string;
-  book: Book;
+  book: Book; // Rezervatsiya kitob nomiga bo'ladi
   user: {
     id: string;
     firstName: string;
     lastName: string;
   };
+  assignedCopyId?: string | null; // Qaysi nusxa tayinlangani
 }
 
 export interface Channel {

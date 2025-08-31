@@ -11,7 +11,7 @@ datasource db {
 enum Role {
   LIBRARIAN
   USER
-  MANAGER // Yangi rol qo'shildi
+  MANAGER
 }
 
 enum UserStatus {
@@ -20,12 +20,12 @@ enum UserStatus {
   SUSPENDED
 }
 
-enum BookStatus {
-  AVAILABLE
-  BORROWED
-  RESERVED
-  MAINTENANCE
-  PENDING_RETURN
+// YANGI ENUM: Har bir kitob nusxasining holati uchun
+enum BookCopyStatus {
+  AVAILABLE // Kutubxonada mavjud
+  BORROWED // Ijaraga berilgan
+  MAINTENANCE // Ta'mirda
+  LOST // Yo'qolgan
 }
 
 enum LoanStatus {
@@ -49,11 +49,11 @@ enum SuggestionStatus {
 }
 
 enum ReservationStatus {
-  ACTIVE
-  AWAITING_PICKUP
-  FULFILLED
-  EXPIRED
-  CANCELLED
+  ACTIVE // Navbatda
+  AWAITING_PICKUP // Olib ketish kutilmoqda
+  FULFILLED // Bajarilgan (olib ketildi)
+  EXPIRED // Muddati o'tgan (olib ketilmadi)
+  CANCELLED // Bekor qilingan
 }
 
 // --- MODELLAR ---
@@ -67,21 +67,21 @@ model User {
   role           Role       @default(USER)
   status         UserStatus @default(ACTIVE)
   profilePicture String?
-  isPremium      Boolean    @default(false) // Yangi maydon
+  isPremium      Boolean    @default(false)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  // Blog tizimi uchun yangi bog'lanishlar
+  // Blog tizimi (o'zgarishsiz)
   channel          Channel?       @relation("ChannelOwner")
   posts            Post[]
   comments         PostComment[]
   reactions        PostReaction[]
   followedChannels Follow[]
 
-  // Kutubxona tizimi uchun bog'lanishlar
+  // Kutubxona tizimi
   loans         Loan[]
   reservations  Reservation[]
-  bookComments  BookComment[]    @relation("UserBookComments") // Nomiga aniqlik kiritildi
+  bookComments  BookComment[]    @relation("UserBookComments")
   suggestions   BookSuggestion[]
   notifications Notification[]
   fines         Fine[]
@@ -89,8 +89,7 @@ model User {
   @@map("users")
 }
 
-// --- YANGI MODELLAR (BLOG TIZIMI) ---
-
+// --- BLOG TIZIMI MODELLARI (o'zgarishsiz qoladi) ---
 model Channel {
   id        String   @id @default(uuid())
   name      String
@@ -99,10 +98,8 @@ model Channel {
   logoImage String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  ownerId String @unique
-  owner   User   @relation("ChannelOwner", fields: [ownerId], references: [id])
-
+  ownerId   String   @unique
+  owner     User     @relation("ChannelOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   posts     Post[]
   followers Follow[]
 
@@ -110,18 +107,15 @@ model Channel {
 }
 
 model Post {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
+  id        String         @id @default(uuid())
+  content   String         @db.Text
   postImage String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   channelId String
-  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
+  channel   Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments  PostComment[]
   reactions PostReaction[]
 
@@ -129,19 +123,16 @@ model Post {
 }
 
 model PostComment {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  postId String
-  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  parentId String?
-  parent   PostComment?  @relation("Replies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  replies  PostComment[] @relation("Replies")
+  id        String        @id @default(uuid())
+  content   String        @db.Text
+  createdAt DateTime      @default(now())
+  postId    String
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    PostComment?  @relation("Replies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   PostComment[] @relation("Replies")
 
   @@map("post_comments")
 }
@@ -150,12 +141,10 @@ model PostReaction {
   id        String   @id @default(uuid())
   emoji     String
   createdAt DateTime @default(now())
-
-  postId String
-  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
   @@map("post_reactions")
@@ -164,18 +153,16 @@ model PostReaction {
 model Follow {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-
   channelId String
-  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, userId])
   @@map("follows")
 }
 
-// --- MAVJUD MODELLAR (KUTUBXONA TIZIMI) ---
+// --- KUTUBXONA TIZIMI MODELLARI (KATTA O'ZGARISHLAR BILAN) ---
 
 model Category {
   id          String   @id @default(uuid())
@@ -188,29 +175,49 @@ model Category {
   @@map("categories")
 }
 
+// Book modeli endi "Kitob Pasporti" vazifasini bajaradi
 model Book {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   title         String
-  author        String
-  description   String?       @db.Text
-  isbn          String?       @unique
+  author        String?
+  description   String?  @db.Text
   publisher     String?
   publishedYear Int?
   pageCount     Int?
   coverImage    String?
-  status        BookStatus    @default(AVAILABLE)
   categoryId    String
-  category      Category      @relation(fields: [categoryId], references: [id])
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  loans         Loan[]
-  reservations  Reservation[]
-  comments      BookComment[]
+  category      Category @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Bog'lanishlar
+  copies       BookCopy[] // Bu kitobning barcha jismoniy nusxalari
+  comments     BookComment[]
+  reservations Reservation[]
 
   @@index([title, author])
   @@map("books")
 }
 
+// YANGI MODEL: Har bir jismoniy kitob nusxasi uchun
+model BookCopy {
+  id      String         @id @default(uuid())
+  barcode String         @unique // Har bir nusxaning unikal shtrix-kodi yoki inventar raqami
+  status  BookCopyStatus @default(AVAILABLE)
+
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  // Bog'lanishlar
+  loan Loan? // Bu nusxa faqat bitta aktiv ijarada bo'lishi mumkin
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("book_copies")
+}
+
+// Loan modeli endi to'g'ridan-to'g'ri BookCopy'ga bog'lanadi
 model Loan {
   id               String     @id @default(uuid())
   borrowedAt       DateTime   @default(now())
@@ -218,27 +225,35 @@ model Loan {
   returnedAt       DateTime?
   status           LoanStatus @default(ACTIVE)
   renewalRequested Boolean    @default(false)
-  bookId           String
-  book             Book       @relation(fields: [bookId], references: [id])
-  userId           String
-  user             User       @relation(fields: [userId], references: [id])
-  fine             Fine?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  bookCopyId String   @unique // Qaysi aniq nusxa ijaraga olingani
+  bookCopy   BookCopy @relation(fields: [bookCopyId], references: [id])
+
+  fine Fine?
 
   @@map("loans")
 }
 
+// Reservation modeli asosan Book'ga bog'lanadi, lekin nusxa tayinlanishi ham mumkin
 model Reservation {
   id         String            @id @default(uuid())
   reservedAt DateTime          @default(now())
-  expiresAt  DateTime?
+  expiresAt  DateTime? // Qachongacha olib ketishi kerakligi
   status     ReservationStatus @default(ACTIVE)
 
-  bookId String
-  book   Book   @relation(fields: [bookId], references: [id])
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  @@unique([bookId, userId], name: "unique_user_book_reservation")
+  bookId String // Qaysi kitob nomi band qilingani
+  book   Book   @relation(fields: [bookId], references: [id])
+
+  // Foydalanuvchi olib ketishi uchun tayinlangan aniq nusxa (ixtiyoriy)
+  assignedCopyId String?
+
+  @@unique([bookId, userId, status], name: "active_user_book_reservation")
   @@map("reservations")
 }
 
@@ -248,8 +263,8 @@ model Fine {
   reason    String
   isPaid    Boolean   @default(false)
   paidAt    DateTime?
-  loanId    String?   @unique // Ixtiyoriy qilingan
-  loan      Loan?     @relation(fields: [loanId], references: [id]) // Ixtiyoriy qilingan
+  loanId    String?   @unique
+  loan      Loan?     @relation(fields: [loanId], references: [id])
   userId    String
   user      User      @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())
@@ -264,9 +279,9 @@ model BookComment {
   rating    Int?
   createdAt DateTime @default(now())
   bookId    String
-  book      Book     @relation(fields: [bookId], references: [id])
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation("UserBookComments", fields: [userId], references: [id]) // Nomiga aniqlik kiritildi
+  user      User     @relation("UserBookComments", fields: [userId], references: [id])
 
   @@map("book_comments")
 }

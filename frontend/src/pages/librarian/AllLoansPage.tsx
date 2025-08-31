@@ -1,4 +1,5 @@
 // src/pages/librarian/AllLoansPage.tsx
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, ButtonGroup, Tabs, Tab } from '@mui/material';
 import api from '../../api';
@@ -8,21 +9,21 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import toast from 'react-hot-toast';
 
 const getStatusChip = (status: LoanStatus) => {
-  const color = status === 'ACTIVE' ? 'primary' : status === 'OVERDUE' ? 'error' : status === 'PENDING_RETURN' ? 'warning' : 'default';
-  return <Chip label={status} color={color} size="small" sx={{ fontWeight: 'bold' }} />;
+  const color = status === 'ACTIVE' ? 'primary' : status === 'OVERDUE' ? 'error' : status === 'PENDING_RETURN' ? 'warning' : 'success';
+  return <Chip label={status.replace('_', ' ')} color={color} size="small" sx={{ fontWeight: 'bold' }} />;
 };
 
 const AllLoansPage: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'pending' | 'renewal' | 'all'>('pending');
+  const [filter, setFilter] = useState<'pending' | 'renewal' | 'active' | 'history'>('pending');
 
   const fetchLoans = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get<Loan[]>('/loans');
+      const response = await api.get<Loan[]>('/loans', { params: { filter } });
       setLoans(response.data);
     } catch (err) {
       const errorMessage = 'Ijaralarni yuklashda xatolik yuz berdi.';
@@ -31,7 +32,7 @@ const AllLoansPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     fetchLoans();
@@ -48,14 +49,8 @@ const AllLoansPage: React.FC = () => {
     }
   };
 
-  const filteredLoans = loans.filter(loan => {
-    if (filter === 'pending') return loan.status === 'PENDING_RETURN';
-    if (filter === 'renewal') return loan.renewalRequested === true && loan.status === 'ACTIVE';
-    return true;
-  });
-
-  if (loading) return <CircularProgress />;
-  if (error && loans.length === 0) return <Alert severity="error">{error}</Alert>;
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
@@ -64,42 +59,136 @@ const AllLoansPage: React.FC = () => {
       </Typography>
       <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={filter} onChange={(_, newValue) => setFilter(newValue)} variant="fullWidth">
-            <Tab label="Qaytarish Kutilayotganlar" value="pending" />
-            <Tab label="Muddat Uzaytirish So'rovlari" value="renewal" />
-            <Tab label="Barcha Ijaralar" value="all" />
+          <Tabs value={filter} onChange={(_, newValue) => setFilter(newValue)} variant="fullWidth" sx={{
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                flex: 1,
+                maxWidth: 'none'
+              },
+              '& .MuiTabs-flexContainer': {
+                justifyContent: 'space-between'
+              }
+            }}
+>
+            <Tab label="Qaytarish Kutilyapti" value="pending" />
+            <Tab label="Muddat Uzaytirish" value="renewal" />
+            <Tab label="Barcha Aktiv Ijaralar" value="active" />
+            <Tab label="Ijara Tarixi" value="history" />
           </Tabs>
         </Box>
+        {loans.length === 0 ? (
+           <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">
+              Bu bo'limda hozircha yozuvlar mavjud emas.
+            </Typography>
+          </Box>
+        ) : (
         <TableContainer>
-          <Table>
+          <Table sx={{ minWidth: 650, tableLayout: 'fixed' }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Kitob</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Foydalanuvchi</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Qaytarish Muddati</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Statusi</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Harakatlar</TableCell>
+                {/* --- YAXSHILANGAN: Chiziqlar olib tashlandi, teng masofada taqsimlandi --- */}
+                <TableCell sx={{ 
+                  fontWeight: 'bold', 
+                  width: '25%', 
+                  px: 4, 
+                  py: 2
+                }}>
+                  Kitob
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 'bold', 
+                  width: '25%', 
+                  px: 4, 
+                  py: 2
+                }}>
+                  Foydalanuvchi
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 'bold', 
+                  width: '25%', 
+                  px: 4, 
+                  py: 2
+                }}>
+                  Qaytarish Muddati
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 'bold', 
+                  width: '25%', 
+                  px: 4, 
+                  py: 2
+                }}>
+                  Statusi
+                </TableCell>
+                <TableCell align="right" sx={{ 
+                  fontWeight: 'bold', 
+                  width: '25%', 
+                  px: 4, 
+                  py: 2
+                }}>
+                  Harakatlar
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredLoans.map((loan) => (
-                <TableRow key={loan.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell>{loan.book.title}</TableCell>
-                  <TableCell>{loan.user.firstName} {loan.user.lastName}</TableCell>
-                  <TableCell>{new Date(loan.dueDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{getStatusChip(loan.status)}</TableCell>
-                  <TableCell align="right">
+              {loans.map((loan) => (
+                <TableRow key={loan.id} hover sx={{ 
+                  '&:hover': { backgroundColor: '#f8f9fa' }
+                }}>
+                  <TableCell sx={{ 
+                    px: 4, 
+                    py: 3,
+                    fontWeight: 500
+                  }}>
+                    {loan.bookCopy.book.title}
+                  </TableCell>
+                  <TableCell sx={{ 
+                    px: 4, 
+                    py: 3
+                  }}>
+                    {loan.user.firstName} {loan.user.lastName}
+                  </TableCell>
+                  <TableCell sx={{ 
+                    px: 4, 
+                    py: 3
+                  }}>
+                    {new Date(loan.dueDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell sx={{ 
+                    px: 4, 
+                    py: 3
+                  }}>
+                    {getStatusChip(loan.status)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ 
+                    px: 4, 
+                    py: 3
+                  }}>
                     {loan.status === 'PENDING_RETURN' && (
-                      <Button variant="contained" size="small" onClick={() => handleAction(() => api.post(`/loans/${loan.id}/confirm-return`), 'Qaytarish tasdiqlandi!')}>
+                      <Button 
+                        variant="contained" 
+                        size="small" 
+                        sx={{ minWidth: 'auto', px: 2 }}
+                        onClick={() => handleAction(() => api.post(`/loans/${loan.id}/confirm-return`), 'Qaytarish tasdiqlandi!')}
+                      >
                         Tasdiqlash
                       </Button>
                     )}
                     {loan.renewalRequested && loan.status === 'ACTIVE' && (
-                      <ButtonGroup variant="outlined" size="small">
-                        <Button color="success" onClick={() => handleAction(() => api.post(`/loans/${loan.id}/approve-renewal`), 'So`rov tasdiqlandi!')}>
+                      <ButtonGroup variant="outlined" size="small" sx={{ '& .MuiButton-root': { minWidth: 'auto', px: 1.5 } }}>
+                        <Button 
+                          color="success" 
+                          onClick={() => handleAction(() => api.post(`/loans/${loan.id}/approve-renewal`), 'So`rov tasdiqlandi!')}
+                        >
                           <CheckCircleIcon fontSize="small" />
                         </Button>
-                        <Button color="error" onClick={() => handleAction(() => api.post(`/loans/${loan.id}/reject-renewal`), 'So`rov rad etildi!')}>
+                        <Button 
+                          color="error" 
+                          onClick={() => handleAction(() => api.post(`/loans/${loan.id}/reject-renewal`), 'So`rov rad etildi!')}
+                        >
                           <CancelIcon fontSize="small" />
                         </Button>
                       </ButtonGroup>
@@ -110,6 +199,7 @@ const AllLoansPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        )}
       </Paper>
     </Box>
   );

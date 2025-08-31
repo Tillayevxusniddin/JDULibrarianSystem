@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Paper, Autocomplete, TextField, Button, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, ListItemButton, Pagination } from '@mui/material';
+import { Box, Typography, Paper, TextField, Button, CircularProgress, List, ListItem, ListItemText, ListItemAvatar, Avatar, ListItemButton, Pagination } from '@mui/material';
 import api from '../../api';
-import type { User, Book, PaginatedResponse } from '../../types';
+import type { User, PaginatedResponse } from '../../types';
 import toast from 'react-hot-toast';
 import { useDebounce } from 'use-debounce';
 
@@ -15,15 +15,15 @@ const ManualFinesPage: React.FC = () => {
   const [totalUserPages, setTotalUserPages] = useState(1);
   const [usersLoading, setUsersLoading] = useState(true);
 
-  // Kitoblar uchun state'lar
-  const [bookSearch, setBookSearch] = useState('');
-  const [debouncedBookSearch] = useDebounce(bookSearch, 500);
-  const [bookOptions, setBookOptions] = useState<Book[]>([]);
+  // --- OLIB TASHLANDI: Kerak bo'lmagan kitob qidirish state'lari ---
+  // const [bookSearch, setBookSearch] = useState('');
+  // const [debouncedBookSearch] = useDebounce(bookSearch, 500);
+  // const [bookOptions, setBookOptions] = useState<Book[]>([]);
   
   // Forma uchun state'lar
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [barcode, setBarcode] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Foydalanuvchilarni paginatsiya va qidiruv bilan yuklash
@@ -45,18 +45,17 @@ const ManualFinesPage: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
-
-  // Kitoblarni qidirish
+  
+  // Qidiruv o'zgarganda birinchi sahifaga qaytish
   useEffect(() => {
-    if (debouncedBookSearch.length > 2) {
-      api.get<PaginatedResponse<Book>>(`/books?search=${debouncedBookSearch}&limit=10`).then(res => setBookOptions(res.data.data));
-    } else {
-      setBookOptions([]);
-    }
-  }, [debouncedBookSearch]);
+    setUserPage(1);
+  }, [debouncedUserSearch]);
+
+  // --- OLIB TASHLANDI: Kerak bo'lmagan kitoblarni qidirish uchun useEffect ---
+  // useEffect(() => { ... }, [debouncedBookSearch]);
 
   const handleSubmit = async () => {
-    if (!selectedUser || !selectedBook || !amount || !reason) {
+    if (!selectedUser || !barcode || !amount || !reason) {
       toast.error('Barcha maydonlarni to`ldiring!');
       return;
     }
@@ -64,16 +63,16 @@ const ManualFinesPage: React.FC = () => {
     try {
         await api.post('/fines/manual', {
             userId: selectedUser.id,
-            bookId: selectedBook.id,
+            barcode: barcode,
             amount: Number(amount),
             reason
         });
         toast.success('Jarima muvaffaqiyatli qo`shildi!');
+        // Formani tozalash
         setSelectedUser(null);
-        setSelectedBook(null);
+        setBarcode('');
         setAmount('');
         setReason('');
-        setBookSearch('');
     } catch (error: any) {
       const message = error.response?.data?.message || "Jarima yaratishda xatolik yuz berdi.";
       toast.error(message);
@@ -81,19 +80,14 @@ const ManualFinesPage: React.FC = () => {
         setLoading(false);
     }
   };
-  
-  // Qidiruv o'zgarganda birinchi sahifaga qaytish
-  useEffect(() => {
-    setUserPage(1);
-  }, [debouncedUserSearch]);
 
   return (
     <Box>
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
-        Qo'lda Jarima Yaratish va Kitob Statusini O'zgartirish
+        Qo'lda Jarima Yaratish
       </Typography>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-        {/* Foydalanuvchilar ro'yxati */}
+        {/* Foydalanuvchilar ro'yxati (o'zgarishsiz) */}
         <div className="md:col-span-4">
           <Paper sx={{ p: 2, borderRadius: 4, height: '70vh', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 2, px: 1 }}>1. Foydalanuvchini tanlang</Typography>
@@ -105,7 +99,7 @@ const ManualFinesPage: React.FC = () => {
                     <ListItem key={user.id} disablePadding>
                         <ListItemButton selected={selectedUser?.id === user.id} onClick={() => setSelectedUser(user)}>
                           <ListItemAvatar>
-                            <Avatar src={user.profilePicture ? `http://localhost:5000/public${user.profilePicture}` : undefined}>
+                            <Avatar src={user.profilePicture ? `http://localhost:5000${user.profilePicture}` : undefined}>
                                 {user.firstName.charAt(0)}
                             </Avatar>
                           </ListItemAvatar>
@@ -122,30 +116,28 @@ const ManualFinesPage: React.FC = () => {
           </Paper>
         </div>
 
-        {/* Jarima formasi */}
+        {/* Jarima formasi (o'zgarishsiz) */}
         <div className="md:col-span-8">
           <Paper sx={{ p: 3, borderRadius: 4 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               2. Jarima ma'lumotlarini kiriting {selectedUser && `uchun: ${selectedUser.firstName}`}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, opacity: selectedUser ? 1 : 0.5, transition: 'opacity 0.3s' }}>
-              <Autocomplete
+              <TextField 
                 disabled={!selectedUser}
-                options={bookOptions}
-                getOptionLabel={(option) => `${option.title} - ${option.author}`}
-                value={selectedBook}
-                inputValue={bookSearch}
-                onInputChange={(_, newValue) => setBookSearch(newValue)}
-                onChange={(_, newValue) => setSelectedBook(newValue)}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => <TextField {...params} label="Yo'qolgan kitobni qidiring" />}
+                label="Kitob nusxasining shtrix-kodi" 
+                variant="outlined"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                required
               />
               <TextField 
                 disabled={!selectedUser}
                 label="Jarima miqdori (so'mda)" 
                 type="number" 
                 value={amount} 
-                onChange={(e) => setAmount(e.target.value)} 
+                onChange={(e) => setAmount(e.target.value)}
+                required
               />
               <TextField 
                 disabled={!selectedUser}
@@ -154,14 +146,15 @@ const ManualFinesPage: React.FC = () => {
                 rows={4} 
                 value={reason} 
                 onChange={(e) => setReason(e.target.value)}
+                required
               />
               <Button 
                 variant="contained" 
                 color="error"
                 onClick={handleSubmit} 
-                disabled={loading || !selectedUser || !selectedBook}
+                disabled={loading || !selectedUser || !barcode}
               >
-                {loading ? <CircularProgress size={24} /> : "Jarima Yaratish va Kitobni Muzlatish"}
+                {loading ? <CircularProgress size={24} /> : "Jarima Yaratish"}
               </Button>
             </Box>
           </Paper>

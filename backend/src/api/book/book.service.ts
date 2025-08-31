@@ -1,110 +1,152 @@
-// src/api/book/book.service.ts
-
-import { Prisma, BookStatus, NotificationType } from '@prisma/client';
+import { Prisma, BookCopyStatus, NotificationType } from '@prisma/client';
 import prisma from '../../config/db.config.js';
 import redisClient from '../../config/redis.config.js';
 import ApiError from '../../utils/ApiError.js';
-import { ReservationStatus } from '@prisma/client';
 import { getIo } from '../../utils/socket.js';
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
 
-export const createBook = async (input: Prisma.BookCreateInput) => {
-  if (!input.coverImage) {
-    input.coverImage = '/public/uploads/books/default.png';
-  }
+// #####################################################################
+// ### ASOSIY KITOBLAR BILAN ISHLASH (CRUD) ###
+// #####################################################################
 
-  const newBook = await prisma.book.create({
-    data: input,
-    include: { category: true },
-  });
-
-  const usersToNotify = await prisma.user.findMany({
-    where: { role: 'USER' },
-    select: { id: true },
-  });
-
-  if (usersToNotify.length > 0) {
-    const notificationData = usersToNotify.map((user) => ({
-      userId: user.id,
-      message: `Kutubxonaga yangi kitob qo'shildi: "${newBook.title}"!`,
-      type: NotificationType.INFO,
-    }));
-    await prisma.notification.createMany({
-      data: notificationData,
+/**
+ * Yangi kitob "pasporti"ni va unga tegishli jismoniy nusxalarni yaratadi.
+ * @param bookData - Kitobning asosiy ma'lumotlari (sarlavha, muallif, isbn...)
+ * @param copiesData - Kitob nusxalarining ro'yxati (har birining o'z shtrix-kodi bilan)
+ */
+export const createBook = async (
+  bookData: Omit<Prisma.BookCreateInput, 'category'> & { categoryId: string },
+  copiesData: { barcode: string }[],
+) => {
+  return prisma.$transaction(async (tx) => {
+    // 1. Kitobning o'zini (pasportini) yaratamiz
+    const newBook = await tx.book.create({
+      data: {
+        ...bookData,
+        coverImage: bookData.coverImage || '/public/uploads/books/default.png',
+      },
+      include: { category: true },
     });
 
-    // Socket orqali barcha foydalanuvchilarga xabar yuborish
-    const io = getIo();
-    usersToNotify.forEach((user) => {
-      // Har bir foydalanuvchiga o'zining "xona"si orqali
-      // bildirishnomalarni yangilash kerakligi haqida signal yuboramiz
-      io.to(user.id).emit('refetch_notifications');
+    // 2. Unga tegishli barcha jismoniy nusxalarni yaratamiz
+    await tx.bookCopy.createMany({
+      data: copiesData.map((copy) => ({
+        bookId: newBook.id,
+        barcode: copy.barcode,
+      })),
     });
-  }
 
-  return newBook;
+    // 3. Foydalanuvchilarga yangi kitob haqida xabar beramiz
+    const usersToNotify = await tx.user.findMany({
+      where: { role: 'USER' },
+      select: { id: true },
+    });
+    if (usersToNotify.length > 0) {
+      const notificationData = usersToNotify.map((user) => ({
+        userId: user.id,
+        message: `Kutubxonaga yangi kitob qo'shildi: "${newBook.title}"!`,
+        type: NotificationType.INFO,
+      }));
+      await tx.notification.createMany({ data: notificationData });
+      const io = getIo();
+      io.to(usersToNotify.map((u) => u.id)).emit('refetch_notifications');
+    }
+
+    // Frontga tushunarli bo'lishi uchun nusxalar sonini ham qaytaramiz
+    return {
+      ...newBook,
+      totalCopies: copiesData.length,
+      availableCopies: copiesData.length,
+    };
+  });
 };
 
+/**
+ * Barcha kitoblar ro'yxatini oladi. Nusxalar sonini virtual hisoblaydi.
+ */
 export const findBooks = async (
-  query: { search?: string; status?: BookStatus; categoryId?: string },
+  query: {
+    search?: string;
+    categoryId?: string;
+    availability?: 'available' | 'borrowed';
+  },
   pagination: { page: number; limit: number },
 ) => {
-  const { search, status, categoryId } = query;
+  const { search, categoryId, availability } = query;
   const { page, limit } = pagination;
-
   const skip = (page - 1) * limit;
 
   const where: Prisma.BookWhereInput = {};
-
-  if (search) {
+  if (search)
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
       { author: { contains: search, mode: 'insensitive' } },
     ];
-  }
-  if (status) where.status = status;
   if (categoryId) where.categoryId = categoryId;
+  if (availability === 'available')
+    where.copies = { some: { status: 'AVAILABLE' } };
+  if (availability === 'borrowed')
+    where.copies = { none: { status: 'AVAILABLE' } };
 
-  const [books, total] = await prisma.$transaction([
-    prisma.book.findMany({
-      where,
-      skip,
-      take: limit,
-      include: { category: true },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.book.count({ where }),
-  ]);
-
-  return { data: books, total };
-};
-
-export const findBookById = async (id: string) => {
-  const BOOK_CACHE_KEY = `book:${id}`;
-
-  const cachedBook = await redisClient.get(BOOK_CACHE_KEY);
-  if (cachedBook) {
-    console.log(`Book (${id}) retrieved from CACHE.`);
-    return JSON.parse(cachedBook);
-  }
-
-  console.log(`Book (${id}) retrieved from DATABASE.`);
-  const book = await prisma.book.findUnique({
-    where: { id },
-    include: { category: true },
+  const books = await prisma.book.findMany({
+    where,
+    skip,
+    take: limit,
+    include: {
+      category: true,
+      copies: { select: { status: true } },
+    },
+    orderBy: { createdAt: 'desc' },
   });
 
-  if (book) {
-    await redisClient.set(BOOK_CACHE_KEY, JSON.stringify(book), {
-      EX: 3600,
-    });
-  }
+  const total = await prisma.book.count({ where });
 
-  return book;
+  const data = books.map((book) => {
+    const totalCopies = book.copies.length;
+    const availableCopies = book.copies.filter(
+      (c) => c.status === 'AVAILABLE',
+    ).length;
+    const { copies, ...rest } = book; // `copies` massivini frontga yubormaymiz
+    return { ...rest, totalCopies, availableCopies };
+  });
+
+  return { data, total };
 };
 
+/**
+ * Bitta kitobni IDsi bo'yicha to'liq ma'lumotlari (va barcha nusxalari) bilan oladi.
+ */
+export const findBookById = async (id: string) => {
+  const BOOK_CACHE_KEY = `book:${id}`;
+  const cachedBook = await redisClient.get(BOOK_CACHE_KEY);
+  if (cachedBook) return JSON.parse(cachedBook);
+
+  const book = await prisma.book.findUnique({
+    where: { id },
+    include: {
+      category: true,
+      copies: { orderBy: { barcode: 'asc' } },
+    },
+  });
+
+  if (!book) return null;
+
+  const totalCopies = book.copies.length;
+  const availableCopies = book.copies.filter(
+    (c) => c.status === 'AVAILABLE',
+  ).length;
+
+  const result = { ...book, totalCopies, availableCopies };
+  await redisClient.set(BOOK_CACHE_KEY, JSON.stringify(result), { EX: 3600 });
+
+  return result;
+};
+
+/**
+ * Faqat kitob "pasporti" ma'lumotlarini (sarlavha, muallif va hokazo) yangilaydi.
+ */
 export const updateBook = async (id: string, data: Prisma.BookUpdateInput) => {
   const updatedBook = await prisma.book.update({
     where: { id },
@@ -112,266 +154,349 @@ export const updateBook = async (id: string, data: Prisma.BookUpdateInput) => {
     include: { category: true },
   });
 
-  const BOOK_CACHE_KEY = `book:${id}`;
-  await redisClient.del(BOOK_CACHE_KEY);
-  console.log(`Book cache invalidated for ID: ${id}`);
-
+  await redisClient.del(`book:${id}`);
   return updatedBook;
 };
 
+/**
+ * Kitobni va unga tegishli barcha nusxalarni o'chiradi.
+ */
 export const deleteBook = async (id: string) => {
-  const book = await prisma.book.findUnique({ where: { id } });
-  if (!book) {
-    throw new ApiError(404, 'Book not found.');
-  }
-  if (book.status !== 'AVAILABLE') {
+  const loanedCopiesCount = await prisma.bookCopy.count({
+    where: { bookId: id, status: 'BORROWED' },
+  });
+
+  if (loanedCopiesCount > 0) {
     throw new ApiError(
       400,
-      'You can only delete books that are currently available.',
+      `Bu kitobning ${loanedCopiesCount} ta nusxasi ijarada. O'chirib bo'lmaydi.`,
     );
   }
 
-  // Rasm yo'lini tranzaksiyadan oldin saqlab olamiz
-  const imagePath = book.coverImage;
-
-  await prisma.$transaction(async (tx) => {
-    const loans = await tx.loan.findMany({ where: { bookId: id } });
-    const loanIds = loans.map((l) => l.id);
-    if (loanIds.length > 0) {
-      await tx.fine.deleteMany({ where: { loanId: { in: loanIds } } });
-    }
-    await tx.loan.deleteMany({ where: { bookId: id } });
-    await tx.bookComment.deleteMany({ where: { bookId: id } });
-    await tx.reservation.deleteMany({ where: { bookId: id } });
-    await tx.book.delete({ where: { id } });
-  });
-
-  // Tranzaksiya muvaffaqiyatli yakunlangandan so'ng, rasm faylini o'chiramiz
-  if (imagePath && imagePath !== '/public/uploads/books/default.png') {
-    try {
-      // Bazadagi yo'l '/public/...' bilan boshlanadi, fayl tizimi uchun boshidagi '/' kerak emas
-      const fullPath = path.join(process.cwd(), imagePath.substring(1));
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-        console.log(`Successfully deleted image: ${fullPath}`);
-      }
-    } catch (err) {
-      console.error(`Failed to delete image ${imagePath}:`, err);
-    }
-  }
-
-  const BOOK_CACHE_KEY = `book:${id}`;
-  await redisClient.del(BOOK_CACHE_KEY);
+  return prisma.book.delete({ where: { id } });
 };
 
+// #####################################################################
+// ### KITOB NUSXALARI BILAN ISHLASH (YANGI FUNKSIYALAR) ###
+// #####################################################################
+
+/**
+ * Kitobga yangi jismoniy nusxa qo'shadi.
+ */
+export const addBookCopy = async (bookId: string, barcode: string) => {
+  await redisClient.del(`book:${bookId}`);
+  return prisma.bookCopy.create({
+    data: { bookId, barcode },
+  });
+};
+
+/**
+ * Bitta nusxaning ma'lumotlarini yangilaydi.
+ */
+export const updateBookCopy = async (
+  copyId: string,
+  data: Prisma.BookCopyUpdateInput,
+) => {
+  const copy = await prisma.bookCopy.findUnique({ where: { id: copyId } });
+  if (!copy) throw new ApiError(404, 'Kitob nusxasi topilmadi');
+  await redisClient.del(`book:${copy.bookId}`);
+  return prisma.bookCopy.update({
+    where: { id: copyId },
+    data,
+  });
+};
+
+/**
+ * Bitta jismoniy nusxani o'chiradi.
+ */
+export const deleteBookCopy = async (copyId: string) => {
+  return prisma.$transaction(async (tx) => {
+    // 1. Nusxani topamiz
+    const copy = await tx.bookCopy.findUnique({ where: { id: copyId } });
+    if (!copy) {
+      throw new ApiError(404, 'Kitob nusxasi topilmadi');
+    }
+
+    // 2. Agar nusxa hozirda ijarada bo'lsa, o'chirishga ruxsat bermaymiz
+    if (copy.status === 'BORROWED') {
+      throw new ApiError(400, "Ijaradagi nusxani o'chirib bo'lmaydi.");
+    }
+
+    // 3. Bu nusxaga bog'liq BARCHA ijara yozuvlarini topamiz
+    const loans = await tx.loan.findMany({
+      where: { bookCopyId: copyId },
+      select: { id: true }, // Faqat IDlari kerak
+    });
+    const loanIds = loans.map((loan) => loan.id);
+
+    // 4. Agar ijara yozuvlari mavjud bo'lsa:
+    if (loanIds.length > 0) {
+      // 4a. O'sha ijaralarga bog'liq jarimalarni o'chiramiz
+      await tx.fine.deleteMany({
+        where: { loanId: { in: loanIds } },
+      });
+      // 4b. So'ngra, ijara yozuvlarining o'zini o'chiramiz
+      await tx.loan.deleteMany({
+        where: { id: { in: loanIds } },
+      });
+    }
+
+    // 5. Barcha bog'liqliklar o'chirilgach, nusxaning o'zini o'chiramiz
+    const deletedCopy = await tx.bookCopy.delete({
+      where: { id: copyId },
+    });
+
+    // 6. Asosiy kitobning keshini tozalaymiz
+    await redisClient.del(`book:${copy.bookId}`);
+
+    return deletedCopy;
+  });
+};
+
+// #####################################################################
+// ### REZERVTSIYA VA IZOHLAR ###
+// #####################################################################
+
+/**
+ * Kitob nomini band qiladi. Bo'sh nusxa bo'lsa, uni tayinlaydi. Bo'lmasa, navbatga qo'yadi.
+ */
+export const reserveBook = async (bookId: string, userId: string) => {
+  return prisma.$transaction(async (tx) => {
+    const activeReservation = await tx.reservation.findFirst({
+      where: { userId, status: { in: ['ACTIVE', 'AWAITING_PICKUP'] } },
+    });
+    if (activeReservation) {
+      throw new ApiError(
+        400,
+        'Sizda allaqachon aktiv band qilingan kitob mavjud.',
+      );
+    }
+
+    const book = await tx.book.findUnique({ where: { id: bookId } });
+    if (!book) throw new ApiError(404, 'Kitob topilmadi.');
+
+    // 1. Bo'sh nusxa qidiramiz
+    const availableCopy = await tx.bookCopy.findFirst({
+      where: { bookId, status: 'AVAILABLE' },
+    });
+
+    let reservation;
+    if (availableCopy) {
+      // 2a. Agar bo'sh nusxa topilsa, uni shu odamga tayinlaymiz
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+
+      // --- ENG MUHIM O'ZGARISH ---
+      // Rezervatsiya yaratishda unga qaysi nusxa tayinlanganini ham yozib qo'yamiz
+      reservation = await tx.reservation.create({
+        data: {
+          bookId,
+          userId,
+          status: 'AWAITING_PICKUP',
+          expiresAt,
+          assignedCopyId: availableCopy.id, // <-- SHU QATOR QO'SHILDI
+        },
+      });
+
+      // Va o'sha nusxani vaqtincha "band qilingan" statusiga o'tkazamiz
+      await tx.bookCopy.update({
+        where: { id: availableCopy.id },
+        data: { status: 'MAINTENANCE' },
+      });
+
+      // Foydalanuvchiga bildirishnoma yuboramiz
+      await tx.notification.create({
+        data: {
+          userId,
+          message: `Siz band qilgan "${book.title}" kitobi tayyor! Uni 48 soat ichida olib keting.`,
+          type: NotificationType.RESERVATION_AVAILABLE,
+        },
+      });
+    } else {
+      // 2b. Agar bo'sh nusxa topilmasa, navbatga qo'yamiz
+      reservation = await tx.reservation.create({
+        data: { bookId, userId, status: 'ACTIVE' },
+      });
+      await tx.notification.create({
+        data: {
+          userId,
+          message: `"${book.title}" kitobining barcha nusxalari band. Siz navbatga yozildingiz.`,
+          type: NotificationType.INFO,
+        },
+      });
+    }
+
+    getIo().to(userId).emit('refetch_notifications');
+    return reservation;
+  });
+};
+
+/**
+ * Kitobga izoh qo'shadi (o'zgarishsiz)
+ */
 export const createComment = async (input: {
   bookId: string;
   userId: string;
   comment: string;
   rating?: number;
 }) => {
-  const { bookId, userId, comment, rating } = input;
   return prisma.bookComment.create({
     data: {
-      comment,
-      rating,
-      book: { connect: { id: bookId } },
-      user: { connect: { id: userId } },
+      comment: input.comment,
+      rating: input.rating,
+      book: { connect: { id: input.bookId } },
+      user: { connect: { id: input.userId } },
     },
     include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-        },
-      },
+      user: { select: { id: true, firstName: true, lastName: true } },
     },
   });
 };
 
+/**
+ * Kitob izohlarini oladi (o'zgarishsiz)
+ */
 export const findCommentsByBookId = async (bookId: string) => {
   return prisma.bookComment.findMany({
     where: { bookId },
     orderBy: { createdAt: 'desc' },
     include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-        },
-      },
+      user: { select: { id: true, firstName: true, lastName: true } },
     },
   });
 };
 
-export const reserveBook = async (bookId: string, userId: string) => {
-  return prisma.$transaction(async (tx) => {
-    const book = await tx.book.findUnique({ where: { id: bookId } });
-    if (!book) {
-      throw new ApiError(404, 'Kitob topilmadi.');
-    }
+// #####################################################################
+// ### EXCEL ORQALI OMMMAVIY QO'SHISH ###
+// #####################################################################
 
-    // 1. Foydalanuvchining aktiv rezervatsiyasi borligini tekshiramiz
-    const activeReservation = await tx.reservation.findFirst({
-      where: {
-        userId,
-        status: { in: ['ACTIVE', 'AWAITING_PICKUP'] },
-      },
-    });
-    if (activeReservation) {
-      if (activeReservation.bookId === bookId) {
-        throw new ApiError(
-          409,
-          'Siz bu kitobni allaqachon band qilib bo`lgansiz.',
-        );
-      } else {
-        throw new ApiError(
-          400,
-          'Siz bir vaqtning o`zida faqat bitta kitobni band qila olasiz.',
-        );
-      }
-    }
-
-    // 2. Kitobning statusini tekshiramiz
-    if (book.status !== 'AVAILABLE' && book.status !== 'BORROWED') {
-      throw new ApiError(400, 'Bu kitobni hozirda band qilib bo`lmaydi.');
-    }
-
-    // 3. Eski, tugagan rezervatsiyani qidiramiz
-    const existingInactiveReservation = await tx.reservation.findFirst({
-      where: {
-        userId,
-        bookId,
-        status: { in: ['FULFILLED', 'EXPIRED', 'CANCELLED'] },
-      },
-    });
-
-    let reservation;
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 48);
-
-    if (book.status === 'AVAILABLE') {
-      await tx.book.update({
-        where: { id: bookId },
-        data: { status: 'RESERVED' },
-      });
-
-      if (existingInactiveReservation) {
-        // Agar eski yozuv bo'lsa, uni YANGILAYMIZ
-        reservation = await tx.reservation.update({
-          where: { id: existingInactiveReservation.id },
-          data: {
-            status: 'AWAITING_PICKUP',
-            expiresAt,
-            reservedAt: new Date(),
-          },
-        });
-      } else {
-        // Agar eski yozuv bo'lmasa, YANGI YARATAMIZ
-        reservation = await tx.reservation.create({
-          data: { bookId, userId, status: 'AWAITING_PICKUP', expiresAt },
-        });
-      }
-
-      // Bildirishnomalarni yuborish
-      const userNotification = await tx.notification.create({
-        data: {
-          userId,
-          message: `Siz "${book.title}" kitobini muvaffaqiyatli band qildingiz! Uni 48 soat ichida kutubxonadan olib keting.`,
-          type: NotificationType.RESERVATION_AVAILABLE,
-        },
-      });
-      getIo().to(userId).emit('new_notification', userNotification);
-
-      const librarians = await tx.user.findMany({
-        where: { role: 'LIBRARIAN' },
-        select: { id: true },
-      });
-      const userWhoReserved = await tx.user.findUnique({
-        where: { id: userId },
-        select: { firstName: true, lastName: true },
-      });
-      if (librarians.length > 0) {
-        const librarianNotificationsData = librarians.map((lib) => ({
-          userId: lib.id,
-          message: `Foydalanuvchi ${userWhoReserved?.firstName} ${userWhoReserved?.lastName} "${book.title}" kitobini band qildi va olib ketishni kutyapti.`,
-          type: NotificationType.INFO,
-        }));
-        await tx.notification.createMany({ data: librarianNotificationsData });
-        getIo()
-          .to(librarians.map((l) => l.id))
-          .emit('refetch_notifications');
-      }
-    } else {
-      // book.status === 'BORROWED'
-      if (existingInactiveReservation) {
-        reservation = await tx.reservation.update({
-          where: { id: existingInactiveReservation.id },
-          data: { status: 'ACTIVE', expiresAt: null, reservedAt: new Date() },
-        });
-      } else {
-        reservation = await tx.reservation.create({
-          data: { bookId, userId, status: 'ACTIVE' },
-        });
-      }
-    }
-
-    return reservation;
-  });
-};
-
+/**
+ * Excel fayli orqali kitoblar va ularning nusxalarini ommaviy qo'shadi.
+ * Excelda "barcodes" degan ustun bo'lishi va unda shtrix-kodlar vergul bilan ajratilishi kerak.
+ */
 export const bulkCreateBooks = async (fileBuffer: Buffer) => {
+  // 1. Excel faylni o'qish va JSON formatiga o'tkazish
   const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
   const booksJson = xlsx.utils.sheet_to_json(worksheet) as any[];
 
   if (!booksJson || booksJson.length === 0) {
-    throw new ApiError(400, 'Excel fayli bo`sh yoki noto`g`ri formatda.');
+    throw new ApiError(400, "Excel fayli bo'sh yoki noto'g'ri formatda.");
   }
 
+  // 2. Mavjud kategoriyalarni olib, tezkor qidiruv uchun Mapga joylash
   const allCategories = await prisma.category.findMany();
   const categoryMap = new Map(
     allCategories.map((cat) => [cat.name.toLowerCase(), cat.id]),
   );
+  const CATEGORIES_CACHE_KEY = 'categories:all';
+  let newCategoriesCreated = false;
 
-  const booksToCreate: Prisma.BookCreateManyInput[] = [];
+  // 3. Muvaffaqiyatli qo'shilgan yozuvlarni sanash uchun hisoblagichlar
+  let createdBooksCount = 0;
+  let createdCopiesCount = 0;
 
-  for (const book of booksJson) {
-    if (!book.title || !book.author || !book.category) {
+  // 4. Exceldagi har bir qator bo'yicha birma-bir ishlash
+  for (const [index, row] of booksJson.entries()) {
+    // Har bir qatorni alohida tranzaksiyada bajaramiz.
+    // Bu agar bitta qatorda xatolik bo'lsa, faqat o'sha qator o'zgarishlari bekor bo'lishini ta'minlaydi.
+    try {
+      await prisma.$transaction(async (tx) => {
+        // 4a. Majburiy maydonlarni tekshirish
+        if (!row.title || !row.category || !row.barcodes) {
+          throw new Error(
+            `Excelning ${
+              index + 2
+            }-qatorida 'title', 'category' yoki 'barcodes' ustunlari to'ldirilmagan.`,
+          );
+        }
+
+        // 4b. Kategoriyani topish yoki yangisini yaratish
+        const categoryName = String(row.category).trim();
+        let categoryId = categoryMap.get(categoryName.toLowerCase());
+        if (!categoryId) {
+          const newCategory = await tx.category.create({
+            data: {
+              name: categoryName,
+              description: 'Excel orqali avtomatik yaratilgan',
+            },
+          });
+          categoryId = newCategory.id;
+          categoryMap.set(categoryName.toLowerCase(), newCategory.id);
+          newCategoriesCreated = true;
+        }
+
+        // 4c. Kitob "pasporti" ma'lumotlarini tayyorlash
+        const bookData = {
+          title: String(row.title),
+          author: row.author ? String(row.author) : null,
+          description: row.description ? String(row.description) : null,
+          publisher: row.publisher ? String(row.publisher) : null,
+          publishedYear: row.publishedYear ? Number(row.publishedYear) : null,
+          pageCount: row.pageCount ? Number(row.pageCount) : null,
+          coverImage: '/public/uploads/books/default.png',
+          categoryId: categoryId,
+        };
+
+        // 4d. Kitob "pasportini" yaratish
+        const newBook = await tx.book.create({ data: bookData });
+
+        // 4e. Shtrix-kodlarni ajratib olish va dublikatlarni tekshirish
+        const barcodes = String(row.barcodes)
+          .split(',')
+          .map((bc) => bc.trim())
+          .filter(Boolean);
+        if (barcodes.length === 0) {
+          throw new Error(
+            `"${row.title}" kitobi uchun (${
+              index + 2
+            }-qator) shtrix-kodlar kiritilmagan.`,
+          );
+        }
+        const existingBarcodes = await tx.bookCopy.findMany({
+          where: { barcode: { in: barcodes } },
+        });
+        if (existingBarcodes.length > 0) {
+          throw new Error(
+            `Quyidagi shtrix-kodlar allaqachon mavjud: ${existingBarcodes
+              .map((bc) => bc.barcode)
+              .join(', ')}`,
+          );
+        }
+
+        // 4f. Jismoniy nusxalarni yaratish
+        const createdCopiesResult = await tx.bookCopy.createMany({
+          data: barcodes.map((barcode) => ({
+            bookId: newBook.id,
+            barcode: barcode,
+          })),
+        });
+
+        // 4g. Hisoblagichlarni yangilash
+        createdBooksCount++;
+        createdCopiesCount += createdCopiesResult.count;
+      });
+    } catch (error: any) {
+      // Agar biror qatorda xatolik bo'lsa, butun jarayonni to'xtatib, tushunarli xabar beramiz
       throw new ApiError(
         400,
-        `Excel faylida barcha kerakli ustunlar (title, author, category) bo'lishi shart.`,
+        error.message ||
+          `Excel faylning ${index + 2}-qatorida xatolik yuz berdi.`,
       );
     }
-
-    const categoryId = categoryMap.get(String(book.category).toLowerCase());
-    if (!categoryId) {
-      throw new ApiError(400, `"${book.category}" nomli kategoriya topilmadi.`);
-    }
-
-    booksToCreate.push({
-      title: String(book.title),
-      author: String(book.author),
-      categoryId: categoryId,
-      isbn: book.isbn ? String(book.isbn) : null,
-      description: book.description ? String(book.description) : null,
-      publisher: book.publisher ? String(book.publisher) : null,
-      publishedYear: book.publishedYear ? Number(book.publishedYear) : null,
-      pageCount: book.pageCount ? Number(book.pageCount) : null,
-      coverImage: '/public/uploads/books/default.png',
-    });
   }
 
-  const result = await prisma.book.createMany({
-    data: booksToCreate,
-    skipDuplicates: true,
-  });
+  // 5. Agar yangi kategoriya yaratilgan bo'lsa, keshni tozalash
+  if (newCategoriesCreated) {
+    await redisClient.del(CATEGORIES_CACHE_KEY);
+    console.log(
+      'Categories cache invalidated due to new categories from bulk import.',
+    );
+  }
 
-  // --- YANGI QO'SHILGAN BILDirishNOMA MANTIG'I ---
-  if (result.count > 0) {
+  // 6. Ommaviy bildirishnoma yuborish
+  if (createdBooksCount > 0) {
     const usersToNotify = await prisma.user.findMany({
       where: { role: 'USER' },
       select: { id: true },
@@ -380,18 +505,21 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
     if (usersToNotify.length > 0) {
       const notificationData = usersToNotify.map((user) => ({
         userId: user.id,
-        message: `Kutubxonaga ${result.count} ta yangi kitob qo'shildi! Katalog bilan tanishing.`,
+        message: `Kutubxonaga ${createdBooksCount} ta yangi nomdagi kitob (${createdCopiesCount} ta nusxada) qo'shildi! Katalog bilan tanishing.`,
         type: NotificationType.INFO,
       }));
 
       await prisma.notification.createMany({ data: notificationData });
 
       const io = getIo();
-      // Barcha foydalanuvchilarga bildirishnomalarni yangilash uchun signal yuboramiz
       io.to(usersToNotify.map((u) => u.id)).emit('refetch_notifications');
     }
   }
-  // --- MANTIQ TUGADI ---
 
-  return result;
+  // 7. Yakuniy natijani qaytarish
+  return {
+    message: `${createdBooksCount} ta kitob nomi va ${createdCopiesCount} ta nusxa muvaffaqiyatli qo'shildi.`,
+    createdBooks: createdBooksCount,
+    createdCopies: createdCopiesCount,
+  };
 };

@@ -3,14 +3,12 @@ import asyncHandler from 'express-async-handler';
 import * as bookService from './book.service.js';
 import ApiError from '../../utils/ApiError.js';
 
+// Kitob "pasporti" uchun handler'lar
 export const createBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const bookData = req.validatedData!.body;
-    if (req.file) {
-      bookData.coverImage = `/${req.file.path.replace(/\\/g, '/')}`;
-    }
-    const book = await bookService.createBook(bookData);
-    res.status(201).json(book);
+    const { copies, ...bookData } = req.validatedData!.body;
+    const newBook = await bookService.createBook(bookData, copies);
+    res.status(201).json(newBook);
   },
 );
 
@@ -32,9 +30,7 @@ export const getBookByIdHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;
     const book = await bookService.findBookById(id);
-    if (!book) {
-      throw new ApiError(404, 'Book not found');
-    }
+    if (!book) throw new ApiError(404, 'Kitob topilmadi');
     res.status(200).json(book);
   },
 );
@@ -43,15 +39,6 @@ export const updateBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;
     const updateData = req.validatedData!.body;
-
-    const bookExists = await bookService.findBookById(id);
-    if (!bookExists) {
-      throw new ApiError(404, 'Book not found');
-    }
-
-    if (req.file) {
-      updateData.coverImage = `/${req.file.path.replace(/\\/g, '/')}`;
-    }
     const updatedBook = await bookService.updateBook(id, updateData);
     res.status(200).json(updatedBook);
   },
@@ -60,21 +47,45 @@ export const updateBookHandler = asyncHandler(
 export const deleteBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;
-    const bookExists = await bookService.findBookById(id);
-    if (!bookExists) {
-      throw new ApiError(404, 'Book not found');
-    }
     await bookService.deleteBook(id);
     res.status(204).send();
   },
 );
 
+// --- YANGI HANDLER'LAR: Kitob nusxalari uchun ---
+
+export const addBookCopyHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { bookId } = req.validatedData!.params;
+    const { barcode } = req.validatedData!.body;
+    const newCopy = await bookService.addBookCopy(bookId, barcode);
+    res.status(201).json(newCopy);
+  },
+);
+
+export const updateBookCopyHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { copyId } = req.validatedData!.params;
+    const updateData = req.validatedData!.body; // Masalan, { status: 'MAINTENANCE' }
+    const updatedCopy = await bookService.updateBookCopy(copyId, updateData);
+    res.status(200).json(updatedCopy);
+  },
+);
+
+export const deleteBookCopyHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { copyId } = req.validatedData!.params;
+    await bookService.deleteBookCopy(copyId);
+    res.status(204).send();
+  },
+);
+
+// Izoh va rezervatsiya uchun handler'lar
 export const createCommentHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { bookId } = req.validatedData!.params;
     const { comment, rating } = req.validatedData!.body;
     const userId = req.user!.id;
-
     const newComment = await bookService.createComment({
       bookId,
       userId,
@@ -95,11 +106,11 @@ export const getCommentsByBookIdHandler = asyncHandler(
 
 export const reserveBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const bookId = req.validatedData!.params.id;
+    const { id: bookId } = req.validatedData!.params;
     const userId = req.user!.id;
     const reservation = await bookService.reserveBook(bookId, userId);
     res.status(201).json({
-      message: 'Book reserved successfully.',
+      message: 'Kitob muvaffaqiyatli band qilindi.',
       data: reservation,
     });
   },
@@ -111,9 +122,6 @@ export const bulkCreateBooksHandler = asyncHandler(
       throw new ApiError(400, 'Excel fayli yuklanmadi.');
     }
     const result = await bookService.bulkCreateBooks(req.file.buffer);
-    res.status(201).json({
-      message: `${result.count} ta yangi kitob muvaffaqiyatli qo'shildi.`,
-      data: result,
-    });
+    res.status(201).json(result);
   },
 );
