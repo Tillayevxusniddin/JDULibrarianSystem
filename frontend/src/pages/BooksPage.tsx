@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Typography, Alert, Pagination, Box, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import LibraryAddIcon from '@mui/icons-material/LibraryAdd'; 
+import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import api from '../api';
 import type { Book, PaginatedResponse } from '../types';
 import BookCard from '../components/books/BookCard';
@@ -28,7 +28,7 @@ const BooksPage: React.FC = () => {
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
 
-  const [isBulkModalOpen, setBulkModalOpen] = useState(false); 
+  const [isBulkModalOpen, setBulkModalOpen] = useState(false);
 
   const { user } = useAuthStore();
 
@@ -37,10 +37,10 @@ const BooksPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await api.get<PaginatedResponse<Book>>('/books', {
-        params: { 
-            page, 
-            limit: 12, 
-            search: filters.search || undefined, 
+        params: {
+            page,
+            limit: 12,
+            search: filters.search || undefined,
             categoryId: filters.categoryId || undefined,
             availability: filters.availability || undefined
         },
@@ -177,6 +177,7 @@ const BooksPage: React.FC = () => {
             open={isModalOpen}
             onClose={() => setIsModalOpen(false)}
             onSuccess={handleSuccess}
+            onCreated={fetchBooks}
             book={selectedBook}
           />
           <BulkBookUploadModal

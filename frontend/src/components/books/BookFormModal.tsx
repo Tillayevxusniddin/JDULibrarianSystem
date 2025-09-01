@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, Typography, Box, IconButton, Divider } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, Typography, Box, IconButton, Divider, FormHelperText } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import api from '../../api';
 import type { Book, Category } from '../../types';
@@ -13,17 +13,20 @@ interface BookFormModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onCreated?: () => void;
   book: Book | null;
 }
 
-const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess, book }) => {
+const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess, onCreated, book }) => {
   // Kitob "pasporti" ma'lumotlari uchun state
   const [formData, setFormData] = useState<any>({});
   // Shtrix-kodlar ro'yxati uchun state
   const [barcodes, setBarcodes] = useState<string[]>(['']);
-  
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [newCategoryMode, setNewCategoryMode] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const isEditing = book !== null;
 
   useEffect(() => {
@@ -31,7 +34,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
     if (open) {
       api.get<Category[]>('/categories').then(res => setCategories(res.data));
     }
-    
+
     // Modal ochilish rejimiga qarab formani to'ldiramiz
     if (isEditing && book) {
       // Tahrirlash rejimi
@@ -46,12 +49,24 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       setFormData({ title: '', author: '', description: '', categoryId: '' });
       setBarcodes(['']); // Shtrix-kodlar maydonini tozalaymiz
     }
+    setNewCategoryMode(false);
+    setNewCategoryName('');
   }, [book, open, isEditing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<any>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target as HTMLInputElement;
+    if (name === 'categoryId') {
+      if (value === '__create__') {
+        setNewCategoryMode(true);
+        setFormData({ ...formData, categoryId: '' });
+        return;
+      } else {
+        setNewCategoryMode(false);
+      }
+    }
+    setFormData({ ...formData, [name]: value });
   };
-  
+
   // --- Shtrix-kodlar bilan ishlash funksiyalari ---
   const handleBarcodeChange = (index: number, value: string) => {
     const newBarcodes = [...barcodes];
@@ -71,12 +86,31 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
   };
   // --- Funksiyalar tugadi ---
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (addAnother: boolean = false) => {
     setLoading(true);
     try {
+      let resolvedCategoryId: string | undefined = formData.categoryId || undefined;
+      // Agar yangi kategoriya yaratilsa, avval uni yaratamiz
+      if (newCategoryMode && newCategoryName.trim()) {
+        try {
+          const resp = await api.post<Category>('/categories', { name: newCategoryName.trim() });
+          resolvedCategoryId = resp.data.id;
+          // Ensure the just-created category is available in the select without refetching
+          setCategories((prev) => {
+            const exists = prev.some((c) => c.id === resp.data.id);
+            return exists ? prev : [resp.data, ...prev];
+          });
+        } catch (err: any) {
+          const msg = err?.response?.data?.message || 'Kategoriyani yaratishda xatolik.';
+          toast.error(msg);
+          setLoading(false);
+          return;
+        }
+      }
+
       if (isEditing && book) {
         // --- TAHRIRLASH MANTIG'I ---
-        await api.put(`/books/${book.id}`, formData);
+        await api.put(`/books/${book.id}`, { ...formData, categoryId: resolvedCategoryId });
         toast.success('Kitob ma\'lumotlari muvaffaqiyatli yangilandi!');
       } else {
         // --- YANGI KITOB YARATISH MANTIG'I ---
@@ -89,13 +123,28 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
 
         const dataToSend = {
           ...formData,
+          categoryId: resolvedCategoryId,
           copies: validBarcodes.map(barcode => ({ barcode })),
         };
-        
+
         await api.post('/books', dataToSend);
         toast.success('Yangi kitob va uning nusxalari muvaffaqiyatli yaratildi!');
       }
-      onSuccess();
+      // addAnother bo'lsa, modal yopilmaydi va forma tozalanadi
+      if (!isEditing && addAnother) {
+        if (onCreated) onCreated();
+        setFormData({
+          title: '',
+          author: '',
+          description: '',
+          categoryId: resolvedCategoryId || '',
+        });
+        setBarcodes(['']);
+        setNewCategoryMode(false);
+        setNewCategoryName('');
+      } else {
+        onSuccess();
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || "Xatolik yuz berdi.";
       toast.error(message);
@@ -103,6 +152,19 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
       setLoading(false);
     }
   };
+
+  // Klaviatura yorlig'i: Ctrl/Cmd + Enter -> "Saqlash va yana qo'shish" (faqat yaratishda)
+  useEffect(() => {
+    if (!open || isEditing) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!loading) void handleSubmit(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, isEditing, loading, formData, newCategoryMode, newCategoryName]);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -117,12 +179,24 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
           <TextField name="author" label="Muallif (Ixtiyoriy)" value={formData.author || ''} onChange={handleChange} />
           <FormControl fullWidth required>
             <InputLabel>Kategoriya</InputLabel>
-            <Select name="categoryId" value={formData.categoryId || ''} label="Kategoriya" onChange={handleChange}>
+            <Select name="categoryId" value={newCategoryMode ? '__create__' : (formData.categoryId || '')} label="Kategoriya" onChange={handleChange}>
+              <MenuItem value="__create__">+ Yangi kategoriya qo'shish</MenuItem>
               {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}
             </Select>
+            {newCategoryMode && (
+              <Box sx={{ mt: 1 }}>
+                <TextField
+                  label="Yangi kategoriya nomi"
+                  fullWidth
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                />
+                <FormHelperText>Saqlash tugmasini bosganda kategoriya yaratiladi</FormHelperText>
+              </Box>
+            )}
           </FormControl>
           <TextField name="description" label="Tavsif (Ixtiyoriy)" value={formData.description || ''} onChange={handleChange} multiline rows={3} />
-          
+
           {/* Faqat Yaratish Rejimida Ko'rinadigan Nusxalar Bo'limi */}
           {!isEditing && (
             <>
@@ -156,9 +230,14 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
 
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
+      <DialogActions sx={{ p: '16px 24px', gap: 1 }}>
         <Button onClick={onClose}>Bekor qilish</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        {!isEditing && (
+          <Button onClick={() => handleSubmit(true)} variant="outlined" disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : "Saqlash va yana qo'shish"}
+          </Button>
+        )}
+        <Button onClick={() => handleSubmit(false)} variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={24} /> : "Saqlash"}
         </Button>
       </DialogActions>
