@@ -1,7 +1,7 @@
 // src/components/books/BookFilter.tsx
 
 import React, { useState, useEffect, useRef } from 'react'; // useRef'ni import qilamiz
-import { TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { TextField, Select, MenuItem, FormControl, InputLabel, Paper, Box } from '@mui/material';
 import api from '../../api';
 import type { Category } from '../../types';
 
@@ -39,8 +39,24 @@ const BookFilter: React.FC<BookFilterProps> = ({ onFilterChange }) => {
   }, [searchTerm, selectedCategory, availability, onFilterChange]);
 
   return (
-    <div className="p-4 mb-6 bg-white rounded-lg shadow-md">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <Paper
+      elevation={0}
+      sx={(theme) => ({
+        p: 2,
+        mb: 3,
+        borderRadius: 2,
+        bgcolor: 'background.paper',
+        border: `1px solid ${theme.palette.divider}`,
+        backgroundImage: 'none',
+      })}
+    >
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' },
+        }}
+      >
         <TextField fullWidth label="Qidiruv" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         <FormControl fullWidth>
           <InputLabel>Kategoriya</InputLabel>
@@ -57,8 +73,8 @@ const BookFilter: React.FC<BookFilterProps> = ({ onFilterChange }) => {
             <MenuItem value="borrowed">Band</MenuItem>
           </Select>
         </FormControl>
-      </div>
-    </div>
+      </Box>
+    </Paper>
   );
 };
 
