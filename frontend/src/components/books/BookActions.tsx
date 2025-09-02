@@ -23,15 +23,16 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
   const [userLoan, setUserLoan] = useState<Loan | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCheckingLoan, setIsCheckingLoan] = useState(true);
-  
+
   // --- IJARAGA BERISH OYNASI UCHUN STATE'LAR ---
   const [loanModalOpen, setLoanModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userOptions, setUserOptions] = useState<SearchedUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
-  const [barcode, setBarcode] = useState('');
+  // Barcode selection as searchable select
+  const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  
+
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
       setIsCheckingLoan(true);
       api.get<Loan[]>('/loans/my').then(response => {
         // --- O'ZGARTIRILGAN MANTIQ: Endi loan.bookCopy.book.id orqali tekshiramiz ---
-        const loanForThisBook = response.data.find(loan => 
+        const loanForThisBook = response.data.find(loan =>
           loan.bookCopy.book.id === book.id && ['ACTIVE', 'OVERDUE'].includes(loan.status)
         );
         setUserLoan(loanForThisBook || null);
@@ -88,28 +89,28 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
   // --- O'ZGARTIRILGAN MANTIQ: Ijaraga berish endi barcode bilan ishlaydi ---
   const handleCreateLoan = () => {
     if (!selectedUser) return toast.error('Iltimos, foydalanuvchini tanlang.');
-    if (!barcode.trim()) return toast.error('Iltimos, kitob nusxasining shtrix-kodini kiriting.');
-    
+    if (!selectedBarcode || !selectedBarcode.trim()) return toast.error('Iltimos, kitob nusxasining shtrix-kodini tanlang.');
+
     handleAction(
-      () => api.post('/loans', { barcode: barcode.trim(), userId: selectedUser.id }),
+      () => api.post('/loans', { barcode: selectedBarcode.trim(), userId: selectedUser.id }),
       'Kitob muvaffaqiyatli ijaraga berildi.',
       'Kitobni ijaraga berishda xatolik yuz berdi.'
     ).then(() => {
       setLoanModalOpen(false);
       setSelectedUser(null);
       setSearchQuery('');
-      setBarcode('');
+      setSelectedBarcode(null);
     });
   };
 
   if (!user || isCheckingLoan) return <Box className="pt-6 mt-6 border-t"><CircularProgress size={24} /></Box>;
-  
+
   const canReserveOrBorrow = book.availableCopies > 0;
 
   return (
     <Box className="flex items-center pt-6 mt-6 space-x-2 border-t">
       {loading && <CircularProgress size={24} />}
-      
+
       {user.role === 'LIBRARIAN' && canReserveOrBorrow && (
         <Button variant="contained" onClick={() => setLoanModalOpen(true)} disabled={loading}>
           Ijaraga Berish
@@ -135,14 +136,25 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
           <Typography variant="body1">
             Kitob nomi: <strong>{book.title}</strong>
           </Typography>
-          <TextField
-            autoFocus
+          {/* Searchable select of available barcodes */}
+          <Autocomplete
+            autoHighlight
             fullWidth
-            label="Kitob nusxasining shtrix-kodi"
-            variant="outlined"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            required
+            options={(book.copies || [])
+              .filter((c) => c.status === 'AVAILABLE')
+              .map((c) => c.barcode)}
+            value={selectedBarcode}
+            onChange={(_, newValue) => setSelectedBarcode(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                autoFocus
+                label="Kitob nusxasining shtrix-kodi"
+                placeholder="Shtrix-kodni qidiring..."
+                variant="outlined"
+                required
+              />
+            )}
           />
           <Autocomplete
             options={userOptions}
@@ -173,7 +185,7 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
         </DialogContent>
         <DialogActions sx={{ p: '16px 24px' }}>
           <Button onClick={() => setLoanModalOpen(false)}>Bekor qilish</Button>
-          <Button onClick={handleCreateLoan} variant="contained" disabled={loading || !selectedUser || !barcode}>Tasdiqlash</Button>
+          <Button onClick={handleCreateLoan} variant="contained" disabled={loading || !selectedUser || !selectedBarcode}>Tasdiqlash</Button>
         </DialogActions>
       </Dialog>
     </Box>
