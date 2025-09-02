@@ -218,8 +218,11 @@ export const deleteBookCopy = async (copyId: string) => {
     }
 
     // 2. Agar nusxa hozirda ijarada bo'lsa, o'chirishga ruxsat bermaymiz
-    if (copy.status === 'BORROWED') {
-      throw new ApiError(400, "Ijaradagi nusxani o'chirib bo'lmaydi.");
+    if (copy.status === 'BORROWED' || copy.status === 'MAINTENANCE') {
+      throw new ApiError(
+        400,
+        `Bu nusxaning holati "${copy.status}". Uni hozir o'chirib bo'lmaydi.`,
+      );
     }
 
     // 3. Bu nusxaga bog'liq BARCHA ijara yozuvlarini topamiz
