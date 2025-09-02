@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, CircularProgress, Button, Paper, IconButton, Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import type { Notification, NotificationType } from '../types';
 import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -28,8 +29,24 @@ const NotificationItem: React.FC<{ notification: Notification }> = ({ notificati
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }}>
             <Paper
                 elevation={0} variant="outlined"
-                sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, mb: 2, borderRadius: 3,
-                    ...(!notification.isRead && { bgcolor: 'primary.light', borderColor: 'primary.main' }),
+                sx={{
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    mb: 2,
+                    borderRadius: 3,
+                    // Make unread background & border dark-mode friendly
+                    ...(!notification.isRead && {
+                        bgcolor: (theme) =>
+                            theme.palette.mode === 'dark'
+                                ? alpha(theme.palette.primary.main, 0.15)
+                                : theme.palette.primary.light,
+                        borderColor: (theme) =>
+                            theme.palette.mode === 'dark'
+                                ? theme.palette.primary.main
+                                : theme.palette.primary.main,
+                    }),
                 }}
             >
                 <Box>{getNotificationIcon(notification.type)}</Box>
