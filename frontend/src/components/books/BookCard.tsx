@@ -41,6 +41,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
       <Card sx={{
         position: 'relative',
         height: '100%',
+        borderRadius: (t) => t.customShape.radius.sm,
         overflow: 'hidden',
         boxShadow: 'none',
       }}>
