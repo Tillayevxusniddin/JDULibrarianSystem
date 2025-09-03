@@ -1,6 +1,7 @@
 // src/pages/librarian/ReservationsPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Alert } from '@mui/material';
+import { responsiveTableSx } from '../../components/common/tableResponsive';
 import api from '../../api';
 import type { Reservation, ReservationStatus } from '../../types';
 import toast from 'react-hot-toast';
@@ -55,7 +56,7 @@ const ReservationsPage: React.FC = () => {
       </Typography>
       <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
         <TableContainer>
-          <Table>
+          <Table sx={responsiveTableSx}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold', px: 5 }}>Kitob</TableCell>
@@ -67,10 +68,10 @@ const ReservationsPage: React.FC = () => {
             <TableBody>
               {reservations.map((res) => (
                 <TableRow key={res.id} hover>
-                  <TableCell sx={{ px: 3 }}>{res.book.title}</TableCell>
-                  <TableCell sx={{ px: 3 }}>{res.user.firstName} {res.user.lastName}</TableCell>
-                  <TableCell sx={{ px: 3 }}>{getStatusChip(res.status)}</TableCell>
-                  <TableCell align="right" sx={{ px: 3 }}>
+                  <TableCell data-label="Kitob" sx={{ px: 3 }}>{res.book.title}</TableCell>
+                  <TableCell data-label="Foydalanuvchi" sx={{ px: 3 }}>{res.user.firstName} {res.user.lastName}</TableCell>
+                  <TableCell data-label="Statusi" sx={{ px: 3 }}>{getStatusChip(res.status)}</TableCell>
+                  <TableCell data-label="Harakatlar" align="right" sx={{ px: 3 }}>
                     {res.status === 'AWAITING_PICKUP' && (
                       <Button size="small" variant="contained" onClick={() => handleFulfill(res.id)}>
                         Ijaraga Berish

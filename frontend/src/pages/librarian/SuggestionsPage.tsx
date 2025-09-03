@@ -1,6 +1,7 @@
 // src/pages/librarian/SuggestionsPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, ButtonGroup } from '@mui/material';
+import { responsiveTableSx } from '../../components/common/tableResponsive';
 import api from '../../api';
 import type { Suggestion, SuggestionStatus } from '../../types';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -56,7 +57,7 @@ const SuggestionsPage: React.FC = () => {
       </Typography>
       <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
         <TableContainer>
-          <Table>
+          <Table sx={responsiveTableSx}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold', px: 5 }}>Sarlavha</TableCell>
@@ -69,11 +70,11 @@ const SuggestionsPage: React.FC = () => {
             <TableBody>
               {suggestions.map((suggestion) => (
                 <TableRow key={suggestion.id} hover>
-                  <TableCell sx={{ px: 5 }}>{suggestion.title}</TableCell>
-                  <TableCell sx={{ px: 5 }}>{suggestion.author || '—'}</TableCell>
-                  <TableCell sx={{ px: 5 }}>{suggestion.user.firstName} {suggestion.user.lastName}</TableCell>
-                  <TableCell sx={{ px: 1 }}>{getStatusChip(suggestion.status)}</TableCell>
-                  <TableCell align="right">
+                  <TableCell data-label="Sarlavha" sx={{ px: 5 }}>{suggestion.title}</TableCell>
+                  <TableCell data-label="Muallif" sx={{ px: 5 }}>{suggestion.author || '—'}</TableCell>
+                  <TableCell data-label="Foydalanuvchi" sx={{ px: 5 }}>{suggestion.user.firstName} {suggestion.user.lastName}</TableCell>
+                  <TableCell data-label="Statusi" sx={{ px: 1 }}>{getStatusChip(suggestion.status)}</TableCell>
+                  <TableCell data-label="Harakatlar" align="right">
                     {suggestion.status === 'PENDING' && (
                       <ButtonGroup variant="outlined" size="small">
                         <Button color="success" onClick={() => handleStatusUpdate(suggestion.id, 'APPROVED')}>

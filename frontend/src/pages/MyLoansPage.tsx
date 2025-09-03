@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Tabs, Tab } from '@mui/material';
+import { responsiveTableSx } from '../components/common/tableResponsive';
 import api from '../api';
 import type { Loan, LoanStatus } from '../types';
 import { Link } from 'react-router-dom';
@@ -73,7 +74,7 @@ const MyLoansPage: React.FC = () => {
           </Box>
         ) : (
           <TableContainer>
-            <Table>
+            <Table sx={responsiveTableSx}>
               <TableHead>
                 <TableRow>
                   {/* --- UI O'ZGARISHI: Ustunlarga kenglik berildi --- */}
@@ -86,14 +87,14 @@ const MyLoansPage: React.FC = () => {
               <TableBody>
                 {loans.map((loan) => (
                   <TableRow key={loan.id} hover>
-                    <TableCell>
+                    <TableCell data-label="Kitob Sarlavhasi">
                       <Link to={`/books/${loan.bookCopy.book.id}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 500 }}>
                         {loan.bookCopy.book.title}
                       </Link>
                     </TableCell>
-                    <TableCell>{new Date(loan.dueDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{getStatusChip(loan.status)}</TableCell>
-                    <TableCell align="right">
+                    <TableCell data-label="Qaytarish Muddati">{new Date(loan.dueDate).toLocaleDateString()}</TableCell>
+                    <TableCell data-label="Statusi">{getStatusChip(loan.status)}</TableCell>
+                    <TableCell data-label="Harakatlar" align="right">
                       {loan.status === 'ACTIVE' && (
                         <Button 
                           size="small" 

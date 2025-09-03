@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, ButtonGroup, Tabs, Tab } from '@mui/material';
+import { responsiveTableSx } from '../../components/common/tableResponsive';
 import api from '../../api';
 import type { Loan, LoanStatus } from '../../types';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -87,7 +88,7 @@ const AllLoansPage: React.FC = () => {
           </Box>
         ) : (
         <TableContainer>
-          <Table sx={{ minWidth: 650, tableLayout: 'fixed' }}>
+          <Table sx={{ ...responsiveTableSx, minWidth: { md: 650 }, tableLayout: { md: 'fixed' } }}>
             <TableHead>
               <TableRow>
                 {/* --- YAXSHILANGAN: Chiziqlar olib tashlandi, teng masofada taqsimlandi --- */}
@@ -138,32 +139,32 @@ const AllLoansPage: React.FC = () => {
                 <TableRow key={loan.id} hover sx={{ 
                   '&:hover': { backgroundColor: '#f8f9fa' }
                 }}>
-                  <TableCell sx={{ 
+                  <TableCell data-label="Kitob" sx={{ 
                     px: 4, 
                     py: 3,
                     fontWeight: 500
                   }}>
                     {loan.bookCopy.book.title}
                   </TableCell>
-                  <TableCell sx={{ 
+                  <TableCell data-label="Foydalanuvchi" sx={{ 
                     px: 4, 
                     py: 3
                   }}>
                     {loan.user.firstName} {loan.user.lastName}
                   </TableCell>
-                  <TableCell sx={{ 
+                  <TableCell data-label="Qaytarish Muddati" sx={{ 
                     px: 4, 
                     py: 3
                   }}>
                     {new Date(loan.dueDate).toLocaleDateString()}
                   </TableCell>
-                  <TableCell sx={{ 
+                  <TableCell data-label="Statusi" sx={{ 
                     px: 4, 
                     py: 3
                   }}>
                     {getStatusChip(loan.status)}
                   </TableCell>
-                  <TableCell align="right" sx={{ 
+                  <TableCell data-label="Harakatlar" align="right" sx={{ 
                     px: 4, 
                     py: 3
                   }}>

@@ -1,6 +1,7 @@
 // src/pages/librarian/CategoriesPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { responsiveTableSx } from '../../components/common/tableResponsive';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -72,7 +73,7 @@ const CategoriesPage: React.FC = () => {
 
       <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
         <TableContainer>
-          <Table>
+          <Table sx={responsiveTableSx}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold', px: 7 }}>Nomi</TableCell>
@@ -83,9 +84,9 @@ const CategoriesPage: React.FC = () => {
             <TableBody>
               {categories.map((cat) => (
                 <TableRow key={cat.id} hover>
-                  <TableCell sx={{ px: 7 }}>{cat.name}</TableCell>
-                  <TableCell sx={{ px: 7 }}>{cat.description || '—'}</TableCell>
-                  <TableCell sx={{ px: 9 }} align="right">
+                  <TableCell data-label="Nomi" sx={{ px: 7 }}>{cat.name}</TableCell>
+                  <TableCell data-label="Tavsifi" sx={{ px: 7 }}>{cat.description || '—'}</TableCell>
+                  <TableCell data-label="Harakatlar" sx={{ px: 9 }} align="right">
                     <IconButton onClick={() => handleOpenModal(cat)}><EditIcon /></IconButton>
                     <IconButton onClick={() => handleDeleteClick(cat)} color="error"><DeleteIcon /></IconButton>
                   </TableCell>

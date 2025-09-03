@@ -1,6 +1,7 @@
 // src/pages/MyFinesPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
+import { responsiveTableSx } from '../components/common/tableResponsive';
 import api from '../api';
 import type { Fine } from '../types';
 import { Link } from 'react-router-dom';
@@ -41,7 +42,7 @@ const MyFinesPage: React.FC = () => {
       ) : (
         <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
           <TableContainer>
-            <Table>
+            <Table sx={responsiveTableSx}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 'bold' }}>Kitob</TableCell>
@@ -54,7 +55,7 @@ const MyFinesPage: React.FC = () => {
               <TableBody>
                 {fines.map((fine) => (
                   <TableRow key={fine.id} hover>
-                    <TableCell>
+                    <TableCell data-label="Kitob">
                       {/* --- O'ZGARISH: Murojaat yo'li yangilandi + optional chaining --- */}
                       {fine.loan ? (
                         <Link to={`/books/${fine.loan.bookCopy.book.id}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 500 }}>
@@ -64,10 +65,10 @@ const MyFinesPage: React.FC = () => {
                         'Ijaraga bog\'lanmagan'
                       )}
                     </TableCell>
-                    <TableCell>{fine.reason}</TableCell>
-                    <TableCell>{fine.amount.toLocaleString()} so'm</TableCell>
-                    <TableCell>{new Date(fine.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Sababi">{fine.reason}</TableCell>
+                    <TableCell data-label="Miqdori">{fine.amount.toLocaleString()} so'm</TableCell>
+                    <TableCell data-label="Sana">{new Date(fine.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell data-label="Statusi">
                       <Chip label={fine.isPaid ? "To'langan" : "To'lanmagan"} color={fine.isPaid ? 'success' : 'error'} size="small" />
                     </TableCell>
                   </TableRow>

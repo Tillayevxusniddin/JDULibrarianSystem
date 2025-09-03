@@ -1,5 +1,6 @@
 import React from 'react';
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Chip, Box } from '@mui/material';
+import { responsiveTableSx } from '../common/tableResponsive';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete'; // <-- YANGI IKONKA
 import type { User, UserStatus } from '../../types';
@@ -19,7 +20,7 @@ const getStatusColor = (status: UserStatus) => {
 const UsersTable: React.FC<UsersTableProps> = ({ users, onEdit, onDelete }) => {
   return (
     <TableContainer component={Paper}>
-      <Table>
+      <Table sx={responsiveTableSx}>
         <TableHead>
           <TableRow>
             <TableCell>Ism Familiya</TableCell>
@@ -32,13 +33,13 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onEdit, onDelete }) => {
         <TableBody>
           {users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell>{user.firstName} {user.lastName}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>{user.role}</TableCell>
-              <TableCell>
+              <TableCell data-label="Ism Familiya">{user.firstName} {user.lastName}</TableCell>
+              <TableCell data-label="Email">{user.email}</TableCell>
+              <TableCell data-label="Roli">{user.role}</TableCell>
+              <TableCell data-label="Statusi">
                 <Chip label={user.status} color={getStatusColor(user.status)} size="small" />
               </TableCell>
-              <TableCell align="right">
+              <TableCell data-label="Harakatlar" align="right">
                 <Box>
                   <IconButton onClick={() => onEdit(user)} color="primary">
                     <EditIcon />

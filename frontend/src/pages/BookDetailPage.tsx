@@ -25,6 +25,7 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material';
+import { responsiveTableSx } from '../components/common/tableResponsive';
 import api from '../api';
 import type { Book, BookComment, BookCopy, BookCopyStatus } from '../types';
 import CommentList from '../components/books/CommentList';
@@ -212,7 +213,7 @@ const BookDetailPage: React.FC = () => {
                 <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setAddCopyModalOpen(true)}>Yangi nusxa qo'shish</Button>
               </Box>
               <TableContainer>
-                <Table size="small">
+                <Table size="small" sx={responsiveTableSx}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Shtrix-kod (Barcode)</TableCell>
@@ -223,9 +224,9 @@ const BookDetailPage: React.FC = () => {
                   <TableBody>
                     {book.copies.map((copy) => (
                       <TableRow key={copy.id} hover>
-                        <TableCell>{copy.barcode}</TableCell>
-                        <TableCell><Chip label={copy.status} color={getCopyStatusChipColor(copy.status)} size="small" /></TableCell>
-                        <TableCell align="right">
+                        <TableCell data-label="Shtrix-kod (Barcode)">{copy.barcode}</TableCell>
+                        <TableCell data-label="Holati"><Chip label={copy.status} color={getCopyStatusChipColor(copy.status)} size="small" /></TableCell>
+                        <TableCell data-label="Harakatlar" align="right">
                           <IconButton onClick={(e) => handleMenuClick(e, copy)}><MoreVertIcon /></IconButton>
                         </TableCell>
                       </TableRow>

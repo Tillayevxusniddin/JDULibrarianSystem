@@ -1,6 +1,7 @@
 // src/pages/librarian/FinesPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Tabs, Tab } from '@mui/material';
+import { responsiveTableSx } from '../../components/common/tableResponsive';
 import api from '../../api';
 import type { Fine } from '../../types';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -63,7 +64,7 @@ const FinesPage: React.FC = () => {
           </Tabs>
         </Box>
         <TableContainer>
-          <Table>
+          <Table sx={responsiveTableSx}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Foydalanuvchi</TableCell>
@@ -77,14 +78,14 @@ const FinesPage: React.FC = () => {
             <TableBody>
               {fines.map((fine) => (
                 <TableRow key={fine.id} hover>
-                  <TableCell>{fine.user.firstName} {fine.user.lastName}</TableCell>
-                  <TableCell>{fine.reason}</TableCell>
-                  <TableCell>{fine.amount.toLocaleString()} so'm</TableCell>
-                  <TableCell>{new Date(fine.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Foydalanuvchi">{fine.user.firstName} {fine.user.lastName}</TableCell>
+                  <TableCell data-label="Sababi">{fine.reason}</TableCell>
+                  <TableCell data-label="Miqdori">{fine.amount.toLocaleString()} so'm</TableCell>
+                  <TableCell data-label="Sana">{new Date(fine.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell data-label="Statusi">
                     <Chip label={fine.isPaid ? "To'langan" : "To'lanmagan"} color={fine.isPaid ? 'success' : 'error'} size="small" />
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell data-label="Harakatlar" align="right">
                     {!fine.isPaid && (
                       <Button
                         variant="contained"

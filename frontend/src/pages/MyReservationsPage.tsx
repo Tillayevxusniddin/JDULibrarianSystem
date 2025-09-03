@@ -1,6 +1,7 @@
 // src/pages/MyReservationsPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { responsiveTableSx } from '../components/common/tableResponsive';
 import api from '../api';
 import type { Reservation, ReservationStatus } from '../types';
 import { Link } from 'react-router-dom';
@@ -73,7 +74,7 @@ const MyReservationsPage: React.FC = () => {
         ) : (
           <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
             <TableContainer>
-              <Table>
+              <Table sx={responsiveTableSx}>
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 'bold' }}>Kitob Sarlavhasi</TableCell>
@@ -85,18 +86,18 @@ const MyReservationsPage: React.FC = () => {
                 <TableBody>
                   {reservations.map((res) => (
                     <TableRow key={res.id} hover>
-                      <TableCell>
+                      <TableCell data-label="Kitob Sarlavhasi">
                         <Link to={`/books/${res.book.id}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 500 }}>
                           {res.book.title}
                         </Link>
                       </TableCell>
-                      <TableCell>{getStatusChip(res.status)}</TableCell>
-                      <TableCell>
+                      <TableCell data-label="Statusi">{getStatusChip(res.status)}</TableCell>
+                      <TableCell data-label="Muddati Tugaydi">
                         {res.status === 'AWAITING_PICKUP' && res.expiresAt
                           ? new Date(res.expiresAt).toLocaleString()
                           : 'Kitob qaytarilishini kuting'}
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell data-label="Harakatlar" align="right">
                         {(res.status === 'ACTIVE' || res.status === 'AWAITING_PICKUP') && (
                           <Button size="small" color="error" onClick={() => openConfirmDialog(res.id)}>
                             Bekor qilish
