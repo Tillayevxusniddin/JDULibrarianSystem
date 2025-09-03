@@ -35,7 +35,7 @@ const NotificationItem: React.FC<{ notification: Notification }> = ({ notificati
                     alignItems: 'center',
                     gap: 2,
                     mb: 2,
-                    borderRadius: 3,
+                    borderRadius: (t) => t.customShape.radius.md,
                     // Make unread background & border dark-mode friendly
                     ...(!notification.isRead && {
                         bgcolor: (theme) =>
@@ -95,7 +95,7 @@ const NotificationsPage: React.FC = () => {
         </Box>
       </Box>
       
-      <Paper sx={{ borderRadius: 4 }}>
+      <Paper>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={filter} onChange={(_, newValue) => setFilter(newValue)} variant="fullWidth">
             <Tab label="Barchasi" value="all" />

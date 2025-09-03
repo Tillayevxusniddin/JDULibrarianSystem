@@ -25,7 +25,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, to }) =>
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderRadius: 4,
           color: 'white',
           background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
           overflow: 'hidden',

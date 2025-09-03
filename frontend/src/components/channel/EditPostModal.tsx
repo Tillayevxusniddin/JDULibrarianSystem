@@ -70,7 +70,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ post, open, onClose, onPo
         <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {imagePreview && (
                 <Box sx={{ position: 'relative', width: 150, mb: 1 }}>
-                    <img src={imagePreview} alt="Preview" style={{ width: '100%', borderRadius: '8px' }} />
+                    <Box component="img" src={imagePreview} alt="Preview" sx={{ width: '100%', borderRadius: (t) => t.customShape.radius.sm }} />
                 </Box>
             )}
             <TextField
@@ -90,7 +90,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ post, open, onClose, onPo
             </Button>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
+      <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
         <Button onClick={onClose}>Bekor qilish</Button>
         <Button onClick={handleSubmit} variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={24} /> : "Saqlash"}

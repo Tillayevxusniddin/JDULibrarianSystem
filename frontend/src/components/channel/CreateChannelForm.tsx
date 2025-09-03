@@ -39,7 +39,7 @@ const CreateChannelForm: React.FC<CreateChannelFormProps> = ({ onSuccess }) => {
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
-        <Paper sx={{ p: 4, borderRadius: 4 }}>
+        <Paper sx={{ p: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}>
             O'z Kanalingizni Yarating
           </Typography>

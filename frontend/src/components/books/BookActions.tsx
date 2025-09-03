@@ -183,7 +183,7 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
             )}
           />
         </DialogContent>
-        <DialogActions sx={{ p: '16px 24px' }}>
+        <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
           <Button onClick={() => setLoanModalOpen(false)}>Bekor qilish</Button>
           <Button onClick={handleCreateLoan} variant="contained" disabled={loading || !selectedUser || !selectedBarcode}>Tasdiqlash</Button>
         </DialogActions>

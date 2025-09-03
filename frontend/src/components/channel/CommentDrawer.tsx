@@ -30,9 +30,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, isOwnComment }) => {
                     bgcolor: isOwnComment ? 'primary.main' : 'background.paper',
                     color: isOwnComment ? 'primary.contrastText' : 'text.primary',
                     p: 1.5,
-                    borderRadius: 4,
-                    borderTopLeftRadius: isOwnComment ? 16 : 4,
-                    borderTopRightRadius: isOwnComment ? 4 : 16,
+                    borderRadius: (t) => t.customShape.radius.md,
+                    borderTopLeftRadius: (t) => (isOwnComment ? t.customShape.radius.lg : t.customShape.radius.sm),
+                    borderTopRightRadius: (t) => (isOwnComment ? t.customShape.radius.sm : t.customShape.radius.lg),
                 }}>
                     <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>
                         {comment.user.firstName} {comment.user.lastName}
@@ -149,7 +149,7 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({ post, open, onClose }) =>
               onChange={(e) => setNewComment(e.target.value)}
               size="small"
             />
-            <Button variant="contained" onClick={handleSubmitComment} sx={{ p: '8px' }}>
+            <Button variant="contained" onClick={handleSubmitComment} sx={{ p: 1 }}>
               <SendIcon />
             </Button>
           </Box>

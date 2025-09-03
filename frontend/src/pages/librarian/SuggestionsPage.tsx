@@ -55,7 +55,7 @@ const SuggestionsPage: React.FC = () => {
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
         Kitob Takliflari
       </Typography>
-      <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <TableContainer>
           <Table sx={responsiveTableSx}>
             <TableHead>

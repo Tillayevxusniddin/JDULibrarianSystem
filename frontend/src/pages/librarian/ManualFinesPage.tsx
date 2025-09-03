@@ -89,7 +89,7 @@ const ManualFinesPage: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
         {/* Foydalanuvchilar ro'yxati (o'zgarishsiz) */}
         <div className="md:col-span-4">
-          <Paper sx={{ p: 2, borderRadius: 4, height: '70vh', display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ p: 2, height: '70vh', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 2, px: 1 }}>1. Foydalanuvchini tanlang</Typography>
             <TextField label="Foydalanuvchini qidirish..." variant="outlined" size="small" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} sx={{ mb: 2 }} />
             <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
@@ -118,7 +118,7 @@ const ManualFinesPage: React.FC = () => {
 
         {/* Jarima formasi (o'zgarishsiz) */}
         <div className="md:col-span-8">
-          <Paper sx={{ p: 3, borderRadius: 4 }}>
+          <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               2. Jarima ma'lumotlarini kiriting {selectedUser && `uchun: ${selectedUser.firstName}`}
             </Typography>

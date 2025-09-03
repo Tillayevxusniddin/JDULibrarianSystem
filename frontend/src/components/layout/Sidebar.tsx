@@ -73,7 +73,7 @@ const SidebarContent: React.FC = () => {
                 sx={{
                   minHeight: 48,
                   px: 2.5,
-                  borderRadius: '8px',
+                  borderRadius: (t) => t.customShape.radius.sm,
                   margin: '4px 8px',
                   '&.Mui-selected': {
                     backgroundColor: 'action.hover',

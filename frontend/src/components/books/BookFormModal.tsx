@@ -230,7 +230,7 @@ const BookFormModal: React.FC<BookFormModalProps> = ({ open, onClose, onSuccess,
 
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px', gap: 1 }}>
+      <DialogActions sx={{ p: (t) => t.spacing(2, 3), gap: 1 }}>
         <Button onClick={onClose}>Bekor qilish</Button>
         {!isEditing && (
           <Button onClick={() => handleSubmit(true)} variant="outlined" disabled={loading}>

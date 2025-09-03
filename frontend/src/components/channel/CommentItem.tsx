@@ -23,7 +23,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete, c
         {comment.user.firstName.charAt(0)}
       </Avatar>
       <Box sx={{ flexGrow: 1 }}>
-        <Box sx={{ bgcolor: 'action.hover', p: 1.5, borderRadius: 3 }}>
+        <Box sx={{ bgcolor: 'action.hover', p: 1.5, borderRadius: (t) => t.customShape.radius.md }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
               {comment.user.firstName} {comment.user.lastName}

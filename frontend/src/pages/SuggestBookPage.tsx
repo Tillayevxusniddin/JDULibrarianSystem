@@ -47,7 +47,7 @@ const SuggestBookPage: React.FC = () => {
         initial={{ opacity: 0, y: 30 }} 
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        sx={{ p: { xs: 2, sm: 4 }, borderRadius: 4 }}
+        sx={{ p: { xs: 2, sm: 4 } }}
       >
         <Stepper activeStep={title ? (note ? 2 : 1) : 0} alternativeLabel sx={{ mb: 4 }}>
           {steps.map((label) => (

@@ -8,7 +8,7 @@ const BookCardSkeleton: React.FC = () => {
       <Card sx={{
         position: 'relative',
         height: '400px', // Bizning BookCard bilan bir xil balandlikda
-        borderRadius: 4,
+        // borderRadius inherits from theme (standardized)
         overflow: 'hidden',
         bgcolor: 'action.hover' // Orqa fon uchun xiraroq rang
       }}>

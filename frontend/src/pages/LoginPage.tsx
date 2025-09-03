@@ -67,7 +67,7 @@ const LoginPage: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
-        <Paper elevation={10} sx={{ padding: { xs: 3, sm: 5 }, width: '100%', maxWidth: '420px', borderRadius: 4 }}>
+        <Paper elevation={10} sx={{ padding: { xs: 3, sm: 5 }, width: '100%', maxWidth: '420px' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
             <motion.div
               initial={{ scale: 0 }}

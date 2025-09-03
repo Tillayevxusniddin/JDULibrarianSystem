@@ -68,11 +68,11 @@ const MyReservationsPage: React.FC = () => {
           Mening Rezervlarim
         </Typography>
         {reservations.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 4 }}>
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
             <Typography color="text.secondary">Sizda band qilingan kitoblar mavjud emas.</Typography>
           </Paper>
         ) : (
-          <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
+          <Paper sx={{ overflow: 'hidden' }}>
             <TableContainer>
               <Table sx={responsiveTableSx}>
                 <TableHead>

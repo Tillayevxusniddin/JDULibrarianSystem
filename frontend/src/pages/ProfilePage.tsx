@@ -62,7 +62,7 @@ const ProfilePage: React.FC = () => {
           {/* Chap taraf: Rasm va umumiy ma'lumot - 4 kolonka */}
           <div className="md:col-span-4">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-              <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 4 }}>
+              <Paper sx={{ p: 3, textAlign: 'center' }}>
                 <ProfileAvatar />
                 <Typography variant="h5" sx={{ mt: 2, fontWeight: 'bold' }}>
                   {user.firstName} {user.lastName}
@@ -75,7 +75,7 @@ const ProfilePage: React.FC = () => {
           {/* O'ng taraf: Sozlamalar - 8 kolonka */}
           <div className="md:col-span-8">
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-              <Paper sx={{ p: 3, borderRadius: 4 }}>
+              <Paper sx={{ p: 3 }}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Shaxsiy ma'lumotlar</Typography>
                   <TextField label="Ism" name="firstName" value={formData.firstName} onChange={handleChange} fullWidth />

@@ -56,7 +56,7 @@ const BulkUserUploadModal: React.FC<BulkUserUploadModalProps> = ({ open, onClose
             Excel shablonini yuklab olish
           </Link>
         </Typography>
-        <Box sx={{ border: '2px dashed', borderColor: 'divider', p: 3, textAlign: 'center', borderRadius: 2 }}>
+        <Box sx={{ border: '2px dashed', borderColor: 'divider', p: 3, textAlign: 'center', borderRadius: (t) => t.customShape.radius.sm }}>
           <Button variant="contained" component="label" startIcon={<UploadFileIcon />}>
             Fayl Tanlash
             <input type="file" hidden onChange={handleFileChange} accept=".xls,.xlsx" />
@@ -64,7 +64,7 @@ const BulkUserUploadModal: React.FC<BulkUserUploadModalProps> = ({ open, onClose
           {selectedFile && <Typography sx={{ mt: 2 }}>Tanlangan fayl: {selectedFile.name}</Typography>}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
+      <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
         <Button onClick={onClose} disabled={loading}>Bekor qilish</Button>
         <Button onClick={handleUpload} variant="contained" disabled={!selectedFile || loading}>
           {loading ? <CircularProgress size={24} /> : "Yuklash"}

@@ -41,7 +41,7 @@ const MySubscriptionsPage: React.FC = () => {
       {channels.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
           {channels.map(channel => (
-            <Paper key={channel.id} sx={{ p: 2, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 2, height: '100%' }}>
+            <Paper key={channel.id} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, height: '100%' }}>
               <Avatar 
                 src={channel.logoImage ? `http://localhost:5000/public${channel.logoImage}` : undefined}
                 sx={{ width: 56, height: 56 }}

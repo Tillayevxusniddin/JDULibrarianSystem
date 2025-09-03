@@ -107,12 +107,12 @@ const ManagerPage: React.FC = () => {
       </Typography>
       
       <Paper sx={{ 
-        p: '2px 4px', 
+        p: (t) => t.spacing(0.5, 1), 
         display: 'flex', 
         alignItems: 'center', 
         width: { xs: '100%', md: 400 }, 
         mb: 3, 
-        borderRadius: '12px' 
+        borderRadius: (t) => t.customShape.radius.md 
       }}>
         <InputBase 
           sx={{ ml: 1, flex: 1 }} 
@@ -120,12 +120,12 @@ const ManagerPage: React.FC = () => {
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)} 
         />
-        <IconButton type="button" sx={{ p: '10px' }} aria-label="search">
+        <IconButton type="button" sx={{ p: (t) => t.spacing(1.5) }} aria-label="search">
           <SearchIcon />
         </IconButton>
       </Paper>
       
-      <Paper sx={{ borderRadius: 4 }}>
+      <Paper>
         {loading && users.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />

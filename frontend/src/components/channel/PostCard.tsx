@@ -28,7 +28,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, channel, onDelete, onEdit, on
   const postImageUrl = post.postImage ? `http://localhost:5000${post.postImage}` : undefined;
 
   return (
-    <Paper sx={{ p: {xs: 1, sm: 2}, borderRadius: 4, mb: 2, maxWidth: 700, width: '100%' }}>
+    <Paper sx={{ p: {xs: 1, sm: 2}, mb: 2, maxWidth: 700, width: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Link component={RouterLink} to={`/channels/${channel.linkName}`}>
@@ -57,7 +57,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, channel, onDelete, onEdit, on
       )}
 
       {postImageUrl && (
-        <Box sx={{ mt: 1, borderRadius: 3, overflow: 'hidden', maxWidth: '100%', maxHeight: '500px' }}>
+        <Box sx={{ mt: 1, borderRadius: (t) => t.customShape.radius.md, overflow: 'hidden', maxWidth: '100%', maxHeight: '500px' }}>
           <img 
             src={postImageUrl} 
             alt="Post content" 

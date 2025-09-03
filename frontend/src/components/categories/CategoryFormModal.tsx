@@ -57,7 +57,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ open, onClose, on
           <TextField label="Tavsifi (Ixtiyoriy)" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline rows={3} />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
+      <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
         <Button onClick={onClose}>Bekor qilish</Button>
         <Button onClick={handleSubmit} variant="contained">Saqlash</Button>
       </DialogActions>

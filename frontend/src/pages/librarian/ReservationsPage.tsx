@@ -54,7 +54,7 @@ const ReservationsPage: React.FC = () => {
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
         Rezervatsiyalarni Boshqarish
       </Typography>
-      <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <TableContainer>
           <Table sx={responsiveTableSx}>
             <TableHead>

@@ -55,7 +55,7 @@ const FinesPage: React.FC = () => {
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
         Jarimalarni Boshqarish
       </Typography>
-      <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={filter} onChange={(_, newValue) => setFilter(newValue)} variant="fullWidth">
             <Tab label="To'lanmagan" value="unpaid" />

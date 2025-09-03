@@ -58,7 +58,7 @@ const MyLoansPage: React.FC = () => {
         Mening Ijaralarim
       </Typography>
       
-      <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tab} onChange={(_, newValue) => setTab(newValue)} variant="fullWidth">
             <Tab label="Aktiv Ijaralar" value="active" />

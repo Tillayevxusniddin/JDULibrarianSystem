@@ -22,7 +22,6 @@ const PremiumPage: React.FC = () => {
         <Paper 
           sx={{ 
             p: 4, 
-            borderRadius: 4, 
             textAlign: 'center',
             background: (theme) => `linear-gradient(135deg, ${theme.palette.secondary.light} 0%, ${theme.palette.primary.light} 100%)`
           }}
@@ -38,7 +37,7 @@ const PremiumPage: React.FC = () => {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Paper sx={{ p: 4, borderRadius: 4, mt: 4 }}>
+        <Paper sx={{ p: 4, mt: 4 }}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
             Nimalarga ega bo'lasiz?
           </Typography>
@@ -52,7 +51,7 @@ const PremiumPage: React.FC = () => {
               </ListItem>
             ))}
           </List>
-          <Box sx={{ mt: 4, p: 3, bgcolor: 'action.hover', borderRadius: 3, textAlign: 'center' }}>
+          <Box sx={{ mt: 4, p: 3, bgcolor: 'action.hover', borderRadius: (t) => t.customShape.radius.md, textAlign: 'center' }}>
             <Typography sx={{ fontWeight: 'bold' }}>
               Premium tarifni faollashtirish uchun menejer bilan bog'laning.
             </Typography>

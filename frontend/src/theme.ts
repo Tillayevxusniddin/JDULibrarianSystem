@@ -2,6 +2,25 @@
 import type { PaletteMode, ThemeOptions } from '@mui/material';
 import { blue, grey, pink } from '@mui/material/colors';
 
+// Theme augmentation to add a custom radius scale
+declare module '@mui/material/styles' {
+  interface CustomShape {
+    radius: {
+      xs: number;
+      sm: number;
+      md: number;
+      lg: number;
+      xl: number;
+    };
+  }
+  interface Theme {
+    customShape: CustomShape;
+  }
+  interface ThemeOptions {
+    customShape?: Partial<CustomShape>;
+  }
+}
+
 // Bu yerda biz ilovamiz uchun asosiy dizayn "token"larini (qoidalarini) aniqlaymiz.
 // Bu bizga butun ilova bo'ylab bir xil ko'rinishni saqlashga yordam beradi.
 export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
@@ -55,23 +74,34 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
   },
   // Komponentlarning umumiy ko'rinishini o'zgartiramiz
   shape: {
-    borderRadius: 12, // Barcha burchaklarni yumaloqroq qilamiz
+    borderRadius: 8, // Default radius (was 12)
+  },
+  // App bo'ylab izchil border radius uchun shaxsiy shkala (slimmer corners)
+  customShape: {
+    radius: {
+      xs: 2,
+      sm: 4,
+      md: 8,
+      lg: 12,
+      xl: 16,
+    },
   },
   components: {
     // Tugma (Button) uchun yangi standart stillar
     MuiButton: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           textTransform: 'none',
           fontWeight: 600,
-          padding: '10px 22px',
+          padding: theme.spacing(1.5, 3), // 12px 24px
+          borderRadius: theme.customShape.radius.sm,
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)', // Yumshoq soya
           transition: 'all 0.3s ease-in-out',
           '&:hover': {
             transform: 'translateY(-2px)',
             boxShadow: '0 6px 16px rgba(0,0,0,0.12)', // Hover effekti uchun soya
           },
-        },
+        }),
       },
       defaultProps: {
         disableElevation: true, // MUI ning standart soyasini o'chiramiz
@@ -80,20 +110,22 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     // Karta (Card) va Qog'oz (Paper) uchun yangi stillar
     MuiPaper: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           backgroundImage: 'none', // MUI ning standart gradientini o'chiramiz
-        },
+          borderRadius: theme.customShape.radius.md,
+        }),
       },
     },
     MuiCard: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
+          borderRadius: theme.customShape.radius.md,
           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
           boxShadow: '0 4px 20px rgba(0,0,0,0.05)', // Chiroyliroq standart soya
           '&:hover': {
             boxShadow: '0 8px 30px rgba(0,0,0,0.1)', // Hover uchun kuchliroq soya
           },
-        },
+        }),
       },
     },
     // Kiritish maydoni (TextField) uchun
@@ -104,6 +136,13 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
             borderWidth: '2px', // Fokus bo'lganda ramka qalinligi
           },
         },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          borderRadius: theme.customShape.radius.md,
+        }),
       },
     },
   },

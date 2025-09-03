@@ -71,7 +71,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     <Box>
       {imagePreview && (
         <Box sx={{ position: 'relative', width: 100, mb: 1 }}>
-          <img src={imagePreview} alt="Preview" style={{ width: '100%', borderRadius: '8px' }} />
+          <Box component="img" src={imagePreview} alt="Preview" sx={{ width: '100%', borderRadius: (t) => t.customShape.radius.sm }} />
           <IconButton onClick={removeImage} size="small" sx={{ position: 'absolute', top: -10, right: -10, bgcolor: 'background.paper', '&:hover': { bgcolor: 'grey.200' } }}>
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -87,7 +87,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
           placeholder="Xabar yozing..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '20px' } }}
+          sx={(t) => ({ '& .MuiOutlinedInput-root': { borderRadius: t.customShape.radius.xl } })}
         />
         <IconButton color="primary" component="label" disabled={loading}>
           <PhotoCameraIcon />

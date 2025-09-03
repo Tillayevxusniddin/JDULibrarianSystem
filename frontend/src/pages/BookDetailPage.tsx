@@ -170,7 +170,7 @@ const BookDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 gap-4 px-2 mt-10 md:grid-cols-12 md:gap-6 md:mt-16">
           <div className="md:col-span-4">
             <motion.div variants={itemVariants}>
-              <Paper elevation={10} sx={{ borderRadius: 4, overflow: 'hidden', aspectRatio: '2 / 3' }}>
+              <Paper elevation={10} sx={{ overflow: 'hidden', aspectRatio: '2 / 3' }}>
                 <img src={imageUrl} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </Paper>
             </motion.div>
@@ -182,7 +182,7 @@ const BookDetailPage: React.FC = () => {
               <Typography variant="h5" component="h2" color="text.secondary" sx={{ mb: 3 }}>{book.author || 'Noma\'lum muallif'}</Typography>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(255, 255, 255, 0.08)', borderRadius: 2 }}>
+              <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(255, 255, 255, 0.08)' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{book.availableCopies}</Typography>
@@ -207,7 +207,7 @@ const BookDetailPage: React.FC = () => {
         
         {user?.role === 'LIBRARIAN' && (
           <motion.div variants={itemVariants}>
-            <Paper sx={{ mt: 6, p: { xs: 2, md: 3 }, borderRadius: 4 }}>
+            <Paper sx={{ mt: 6, p: { xs: 2, md: 3 } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Kitob Nusxalari</Typography>
                 <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setAddCopyModalOpen(true)}>Yangi nusxa qo'shish</Button>
@@ -239,7 +239,7 @@ const BookDetailPage: React.FC = () => {
         )}
         
         <motion.div variants={itemVariants}>
-          <Paper sx={{ mt: 4, p: { xs: 2, md: 4 }, borderRadius: 4, mx: 2, mb: 2 }}>
+          <Paper sx={{ mt: 4, p: { xs: 2, md: 4 }, mx: 2, mb: 2 }}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>Fikr-mulohazalar</Typography>
             <Divider sx={{ mb: 3 }} />
             <CommentForm bookId={book.id} onCommentPosted={handleCommentPosted} />

@@ -41,7 +41,6 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
       <Card sx={{
         position: 'relative',
         height: '100%',
-        borderRadius: 4,
         overflow: 'hidden',
         boxShadow: 'none',
       }}>
@@ -96,7 +95,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
                   bgcolor: 'rgba(0,0,0,0.5)', 
                   px: 1.5, 
                   py: 0.5,
-                  borderRadius: 1, 
+                  borderRadius: (t) => t.customShape.radius.sm, 
                   display: 'inline-block',
                   alignSelf: 'flex-start',
                   mb: 1
@@ -133,7 +132,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
             }}
             transition={{ duration: 0.3 }}
           >
-            <CardActions sx={{ p: 0, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: '8px' }}>
+            <CardActions sx={{ p: 0, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: (t) => t.customShape.radius.sm }}>
               <IconButton onClick={() => onEdit(book)} sx={{ color: 'white' }}><EditIcon /></IconButton>
               <IconButton onClick={() => onDelete(book)} sx={{ color: '#ffcdd2' }}><DeleteIcon /></IconButton>
             </CardActions>

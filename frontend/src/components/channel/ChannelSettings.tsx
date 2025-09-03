@@ -46,7 +46,7 @@ const ChannelSettings: React.FC<ChannelSettingsProps> = ({ channel, onChannelUpd
   const logoUrl = channel.logoImage ? `http://localhost:5000/public${channel.logoImage}` : undefined;
 
   return (
-    <Paper sx={{ p: 3, borderRadius: 4, maxWidth: 600, mx: 'auto' }}>
+    <Paper sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
       <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>Kanal Sozlamalari</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>

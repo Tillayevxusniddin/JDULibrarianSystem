@@ -44,7 +44,6 @@ const BookFilter: React.FC<BookFilterProps> = ({ onFilterChange }) => {
       sx={(theme) => ({
         p: 2,
         mb: 3,
-        borderRadius: 2,
         bgcolor: 'background.paper',
         border: `1px solid ${theme.palette.divider}`,
         backgroundImage: 'none',

@@ -71,7 +71,7 @@ const CategoriesPage: React.FC = () => {
         </Button>
       </Box>
 
-      <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <TableContainer>
           <Table sx={responsiveTableSx}>
             <TableHead>

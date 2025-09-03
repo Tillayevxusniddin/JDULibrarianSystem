@@ -87,7 +87,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ open, onClose, onSuccess,
           </FormControl>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
+      <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
         <Button onClick={onClose}>Bekor qilish</Button>
         <Button onClick={handleSubmit} variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={24} /> : 'Saqlash'}
