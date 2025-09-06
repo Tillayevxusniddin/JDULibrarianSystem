@@ -36,3 +36,11 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 bun.lock
+
+# ignore .github directory within all directories and subdirectories
+**/.github/
+
+# ignore AI rules files
+AGENTS.md
+GEMINI.md
+CLAUDE.md
