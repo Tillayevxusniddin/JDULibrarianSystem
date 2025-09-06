@@ -19,7 +19,7 @@ import BookmarksIcon from '@mui/icons-material/Bookmarks';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-// Removed premium/channels-related icons to restore previous set
+import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
 
 
 import { useAuthStore } from '../../store/auth.store';
@@ -39,6 +39,7 @@ const navItems = [
     { text: 'Mening Jarimalarim', icon: <MonetizationOnIcon />, path: '/my-fines', role: ['USER'] },
     // Restored: removed premium item introduced later
     { text: 'Mening Profilim', icon: <AccountCircleIcon />, path: '/profile', role: ['LIBRARIAN', 'USER'] },
+    { text: 'Menejer Paneli', icon: <SupervisorAccountIcon />, path: '/manager-panel', role: ['MANAGER'] },
 ];
 
 const adminNavItems = [
