@@ -132,7 +132,10 @@ const ManagerPage: React.FC = () => {
           </Box>
         ) : (
           <List>
-            {users.map(user => (
+            {users
+              // Premium is only relevant for standard users; hide staff
+              .filter((user) => user.role === 'USER')
+              .map(user => (
               <ListItem 
                 key={user.id}
                 sx={{

@@ -19,7 +19,11 @@ import BookmarksIcon from '@mui/icons-material/Bookmarks';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
+import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
+import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
+import RssFeedIcon from '@mui/icons-material/RssFeed';
 
 
 import { useAuthStore } from '../../store/auth.store';
@@ -29,15 +33,16 @@ import { useUiStore } from '../../store/ui.store';
 // Navigatsiya elementlari ro'yxati
 const navItems = [
     { text: 'Asosiy Sahifa', icon: <DashboardIcon />, path: '/', role: ['LIBRARIAN', 'USER'] },
-    // Restored: removed channel-related items introduced later
+    { text: 'Mening Kanalim', icon: <RssFeedIcon />, path: '/my-channel', role: ['USER'], premiumOnly: true },
+    { text: 'Kanallar', icon: <DynamicFeedIcon />, path: '/channels', role: ['USER'] },
     { text: 'Kitoblar', icon: <BookIcon />, path: '/books', role: ['LIBRARIAN', 'USER'] },
     { text: 'Mening Ijaralarim', icon: <AssignmentIcon />, path: '/my-loans', role: ['USER'] },
     { text: 'Mening Rezervlarim', icon: <BookmarkAddedIcon />, path: '/my-reservations', role: ['USER'] },
     { text: 'Bildirishnomalar', icon: <NotificationsIcon />, path: '/notifications', role: ['LIBRARIAN', 'USER'] },
-    // Restored: removed subscriptions item introduced later
+    { text: 'Mening Obunalarim', icon: <SubscriptionsIcon />, path: '/my-subscriptions', role: ['USER'] },
     { text: 'Kitob Taklif Qilish', icon: <AddCommentIcon />, path: '/suggest-book', role: ['USER'] },
     { text: 'Mening Jarimalarim', icon: <MonetizationOnIcon />, path: '/my-fines', role: ['USER'] },
-    // Restored: removed premium item introduced later
+    { text: 'Premium Olish', icon: <WorkspacePremiumIcon />, path: '/get-premium', role: ['USER'], hideWhenPremium: true },
     { text: 'Mening Profilim', icon: <AccountCircleIcon />, path: '/profile', role: ['LIBRARIAN', 'USER'] },
     { text: 'Menejer Paneli', icon: <SupervisorAccountIcon />, path: '/manager-panel', role: ['MANAGER'] },
 ];
