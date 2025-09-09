@@ -80,9 +80,34 @@ const ReactionSection: React.FC<ReactionSectionProps> = ({ post }) => {
           variant={myReaction === emoji ? 'filled' : 'outlined'}
           color={myReaction === emoji ? 'primary' : 'default'}
           size="small"
+          sx={{
+            borderRadius: 2,
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+            '&:hover': {
+              transform: 'scale(1.1)',
+              boxShadow: (theme) => theme.shadows[2],
+            },
+            ...(myReaction === emoji && {
+              background: 'linear-gradient(45deg, #3B82F6, #8B5CF6)',
+              color: 'white',
+              border: 'none',
+            }),
+          }}
         />
       ))}
-      <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)}>
+      <IconButton 
+        size="small" 
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        sx={{
+          ml: 0.5,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: 'primary.light',
+            transform: 'rotate(180deg)',
+          }
+        }}
+      >
         <AddReactionIcon fontSize="small" />
       </IconButton>
       <Popover
@@ -91,11 +116,32 @@ const ReactionSection: React.FC<ReactionSectionProps> = ({ post }) => {
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 1,
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: (theme) => theme.shadows[8],
+          }
+        }}
       >
-        <Box sx={{ p: 1, display: 'flex', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
           {EMOJI_OPTIONS.map(emoji => (
-            <IconButton key={emoji} onClick={() => handleEmojiClick(emoji)}>
-              <Typography>{emoji}</Typography>
+            <IconButton 
+              key={emoji} 
+              onClick={() => handleEmojiClick(emoji)}
+              sx={{
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  transform: 'scale(1.3)',
+                  bgcolor: 'primary.light',
+                }
+              }}
+            >
+              <Typography sx={{ fontSize: '1.5rem' }}>{emoji}</Typography>
             </IconButton>
           ))}
         </Box>

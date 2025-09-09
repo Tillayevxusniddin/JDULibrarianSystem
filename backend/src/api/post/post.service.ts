@@ -147,3 +147,115 @@ export const deletePost = async (postId: string, userId: string) => {
     }
   }
 };
+
+export const getMyPosts = async (userId: string) => {
+  return prisma.post.findMany({
+    where: { authorId: userId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      content: true,
+      postImage: true,
+      createdAt: true,
+      authorId: true,
+      channelId: true,
+      author: {
+        select: {
+          firstName: true,
+          lastName: true,
+          profilePicture: true,
+        },
+      },
+      channel: {
+        select: {
+          id: true,
+          name: true,
+          linkName: true,
+          logoImage: true,
+        },
+      },
+      reactions: {
+        select: {
+          emoji: true,
+          userId: true,
+        },
+      },
+    },
+  });
+};
+
+export const getAllPosts = async () => {
+  return prisma.post.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      content: true,
+      postImage: true,
+      createdAt: true,
+      authorId: true,
+      channelId: true,
+      author: {
+        select: {
+          firstName: true,
+          lastName: true,
+          profilePicture: true,
+        },
+      },
+      channel: {
+        select: {
+          id: true,
+          name: true,
+          linkName: true,
+          logoImage: true,
+        },
+      },
+      reactions: {
+        select: {
+          emoji: true,
+          userId: true,
+        },
+      },
+    },
+  });
+};
+
+export const getPostById = async (postId: string) => {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: {
+      id: true,
+      content: true,
+      postImage: true,
+      createdAt: true,
+      authorId: true,
+      channelId: true,
+      author: {
+        select: {
+          firstName: true,
+          lastName: true,
+          profilePicture: true,
+        },
+      },
+      channel: {
+        select: {
+          id: true,
+          name: true,
+          linkName: true,
+          logoImage: true,
+        },
+      },
+      reactions: {
+        select: {
+          emoji: true,
+          userId: true,
+        },
+      },
+    },
+  });
+
+  if (!post) {
+    throw new ApiError(404, 'Post topilmadi');
+  }
+
+  return post;
+};

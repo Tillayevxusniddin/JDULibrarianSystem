@@ -5,10 +5,12 @@ import { getIo } from '../../utils/socket.js';
 
 /**
  * Post uchun barcha izohlarni (javoblari bilan birga) oladi
+ * Infinite nested replies uchun barcha izohlarni flat list sifatida olib, keyin nested structure yasaydi
  */
 export const getCommentsByPostId = async (postId: string) => {
-  const comments = await prisma.postComment.findMany({
-    where: { postId, parentId: null }, // Faqat asosiy izohlarni olamiz
+  // Barcha izohlarni olish (nested bo'lmagan holatda)
+  const allComments = await prisma.postComment.findMany({
+    where: { postId },
     orderBy: { createdAt: 'asc' },
     include: {
       user: {
@@ -19,23 +21,20 @@ export const getCommentsByPostId = async (postId: string) => {
           profilePicture: true,
         },
       },
-      replies: {
-        // Har bir izohning javoblarini ham olamiz
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              profilePicture: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-      },
     },
   });
-  return comments;
+
+  // Nested structure yasash (infinite depth uchun)
+  const buildNestedComments = (parentId: string | null = null): any[] => {
+    return allComments
+      .filter((comment) => comment.parentId === parentId)
+      .map((comment) => ({
+        ...comment,
+        replies: buildNestedComments(comment.id),
+      }));
+  };
+
+  return buildNestedComments(null);
 };
 
 /**
@@ -61,17 +60,33 @@ export const createComment = async (
           profilePicture: true,
         },
       },
-      // replies: true, // Bu ortiqcha, chunki yangi izohda javob bo'lmaydi
     },
   });
+
+  // Yangi izohni nested structure bilan qaytarish (infinite depth uchun)
+  const commentWithReplies = {
+    ...newComment,
+    replies: [],
+  };
 
   // Socket orqali real-time xabar yuborish
   const io = getIo();
   // Barcha shu postni kuzatib turganlarga xabar yuboramiz
   const room = `post_comments_${newComment.postId}`;
-  io.to(room).emit('new_comment', newComment);
 
-  return newComment;
+  console.log('🚀 Backend - Emitting new comment to room:', room);
+  console.log('📝 Backend - Comment details:', {
+    id: newComment.id,
+    parentId: newComment.parentId,
+    content: newComment.content,
+    userId: newComment.userId,
+    postId: newComment.postId,
+  });
+
+  // Socket event yuborish
+  io.to(room).emit('new_comment', commentWithReplies);
+
+  return commentWithReplies;
 };
 
 /**

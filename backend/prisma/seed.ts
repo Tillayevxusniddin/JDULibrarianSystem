@@ -112,7 +112,13 @@ async function main() {
     })(),
   ]);
 
-  console.log('Users ready:', [manager.email, librarian.email, user1.email, user2.email, user3.email]);
+  console.log('Users ready:', [
+    manager.email,
+    librarian.email,
+    user1.email,
+    user2.email,
+    user3.email,
+  ]);
 
   // Blog/Channel setup
   const [libChannel, userChannel] = await Promise.all([
@@ -169,7 +175,9 @@ async function main() {
       },
     }),
     prisma.follow.upsert({
-      where: { channelId_userId: { channelId: libChannel.id, userId: user1.id } },
+      where: {
+        channelId_userId: { channelId: libChannel.id, userId: user1.id },
+      },
       update: {},
       create: { channelId: libChannel.id, userId: user1.id },
     }),
@@ -177,9 +185,21 @@ async function main() {
 
   // Categories
   const [fiction, nonfiction, science] = await Promise.all([
-    prisma.category.upsert({ where: { name: 'Fiction' }, update: {}, create: { name: 'Fiction', description: 'Novels and stories' } }),
-    prisma.category.upsert({ where: { name: 'Non-fiction' }, update: {}, create: { name: 'Non-fiction', description: 'Essays and biographies' } }),
-    prisma.category.upsert({ where: { name: 'Science' }, update: {}, create: { name: 'Science', description: 'Science and technology' } }),
+    prisma.category.upsert({
+      where: { name: 'Fiction' },
+      update: {},
+      create: { name: 'Fiction', description: 'Novels and stories' },
+    }),
+    prisma.category.upsert({
+      where: { name: 'Non-fiction' },
+      update: {},
+      create: { name: 'Non-fiction', description: 'Essays and biographies' },
+    }),
+    prisma.category.upsert({
+      where: { name: 'Science' },
+      update: {},
+      create: { name: 'Science', description: 'Science and technology' },
+    }),
   ]);
 
   // Books
@@ -218,11 +238,41 @@ async function main() {
   });
 
   // Book copies with different statuses
-  const duneCopyA = await prisma.bookCopy.create({ data: { bookId: dune.id, barcode: 'BC-DUNE-001', status: BookCopyStatus.AVAILABLE } });
-  const duneCopyB = await prisma.bookCopy.create({ data: { bookId: dune.id, barcode: 'BC-DUNE-002', status: BookCopyStatus.AVAILABLE } });
-  const sapiensCopyA = await prisma.bookCopy.create({ data: { bookId: sapiens.id, barcode: 'BC-SAPI-001', status: BookCopyStatus.AVAILABLE } });
-  const physicsCopyA = await prisma.bookCopy.create({ data: { bookId: physics.id, barcode: 'BC-PHY-001', status: BookCopyStatus.AVAILABLE } });
-  const physicsCopyB = await prisma.bookCopy.create({ data: { bookId: physics.id, barcode: 'BC-PHY-002', status: BookCopyStatus.MAINTENANCE } });
+  const duneCopyA = await prisma.bookCopy.create({
+    data: {
+      bookId: dune.id,
+      barcode: 'BC-DUNE-001',
+      status: BookCopyStatus.AVAILABLE,
+    },
+  });
+  const duneCopyB = await prisma.bookCopy.create({
+    data: {
+      bookId: dune.id,
+      barcode: 'BC-DUNE-002',
+      status: BookCopyStatus.AVAILABLE,
+    },
+  });
+  const sapiensCopyA = await prisma.bookCopy.create({
+    data: {
+      bookId: sapiens.id,
+      barcode: 'BC-SAPI-001',
+      status: BookCopyStatus.AVAILABLE,
+    },
+  });
+  const physicsCopyA = await prisma.bookCopy.create({
+    data: {
+      bookId: physics.id,
+      barcode: 'BC-PHY-001',
+      status: BookCopyStatus.AVAILABLE,
+    },
+  });
+  const physicsCopyB = await prisma.bookCopy.create({
+    data: {
+      bookId: physics.id,
+      barcode: 'BC-PHY-002',
+      status: BookCopyStatus.MAINTENANCE,
+    },
+  });
 
   // Loans: active, returned, overdue, renewal requested
   // Active loan (user1 borrows duneCopyA)
@@ -236,7 +286,10 @@ async function main() {
       renewalRequested: false,
     },
   });
-  await prisma.bookCopy.update({ where: { id: duneCopyA.id }, data: { status: BookCopyStatus.BORROWED } });
+  await prisma.bookCopy.update({
+    where: { id: duneCopyA.id },
+    data: { status: BookCopyStatus.BORROWED },
+  });
 
   // Returned loan (user2 had sapiensCopyA and returned it)
   const returnedLoan = await prisma.loan.create({
@@ -250,7 +303,10 @@ async function main() {
       renewalRequested: false,
     },
   });
-  await prisma.bookCopy.update({ where: { id: sapiensCopyA.id }, data: { status: BookCopyStatus.AVAILABLE } });
+  await prisma.bookCopy.update({
+    where: { id: sapiensCopyA.id },
+    data: { status: BookCopyStatus.AVAILABLE },
+  });
 
   // Overdue loan with fine (user3 borrows duneCopyB and is overdue)
   const overdueLoan = await prisma.loan.create({
@@ -263,7 +319,10 @@ async function main() {
       renewalRequested: false,
     },
   });
-  await prisma.bookCopy.update({ where: { id: duneCopyB.id }, data: { status: BookCopyStatus.BORROWED } });
+  await prisma.bookCopy.update({
+    where: { id: duneCopyB.id },
+    data: { status: BookCopyStatus.BORROWED },
+  });
   const fine = await prisma.fine.create({
     data: {
       amount: new Prisma.Decimal('12.50'),
@@ -275,7 +334,13 @@ async function main() {
   });
 
   // Renewal requested (user1 requests renewal on activeLoan's copy is already used; create another)
-  const renewalCopy = await prisma.bookCopy.create({ data: { bookId: physics.id, barcode: 'BC-PHY-003', status: BookCopyStatus.AVAILABLE } });
+  const renewalCopy = await prisma.bookCopy.create({
+    data: {
+      bookId: physics.id,
+      barcode: 'BC-PHY-003',
+      status: BookCopyStatus.AVAILABLE,
+    },
+  });
   const renewalLoan = await prisma.loan.create({
     data: {
       userId: user1.id,
@@ -286,7 +351,10 @@ async function main() {
       renewalRequested: true,
     },
   });
-  await prisma.bookCopy.update({ where: { id: renewalCopy.id }, data: { status: BookCopyStatus.BORROWED } });
+  await prisma.bookCopy.update({
+    where: { id: renewalCopy.id },
+    data: { status: BookCopyStatus.BORROWED },
+  });
 
   // Reservations across statuses
   const activeReservation = await prisma.reservation.create({
@@ -343,24 +411,95 @@ async function main() {
 
   // Book comments
   await Promise.all([
-    prisma.bookComment.create({ data: { bookId: dune.id, userId: user1.id, comment: 'Fantastic sci-fi classic!', rating: 5 } }),
-    prisma.bookComment.create({ data: { bookId: sapiens.id, userId: user2.id, comment: 'Thought-provoking and well written', rating: 4 } }),
-    prisma.bookComment.create({ data: { bookId: physics.id, userId: user3.id, comment: 'Dense but comprehensive', rating: 4 } }),
+    prisma.bookComment.create({
+      data: {
+        bookId: dune.id,
+        userId: user1.id,
+        comment: 'Fantastic sci-fi classic!',
+        rating: 5,
+      },
+    }),
+    prisma.bookComment.create({
+      data: {
+        bookId: sapiens.id,
+        userId: user2.id,
+        comment: 'Thought-provoking and well written',
+        rating: 4,
+      },
+    }),
+    prisma.bookComment.create({
+      data: {
+        bookId: physics.id,
+        userId: user3.id,
+        comment: 'Dense but comprehensive',
+        rating: 4,
+      },
+    }),
   ]);
 
   // Suggestions in multiple statuses
   await Promise.all([
-    prisma.bookSuggestion.create({ data: { title: 'Clean Code', author: 'Robert C. Martin', note: 'Great for students', status: SuggestionStatus.PENDING, userId: user1.id } }),
-    prisma.bookSuggestion.create({ data: { title: 'Atomic Habits', author: 'James Clear', note: 'Highly requested', status: SuggestionStatus.APPROVED, userId: user2.id } }),
-    prisma.bookSuggestion.create({ data: { title: 'Some Random Book', author: 'Unknown', note: 'Not relevant to curriculum', status: SuggestionStatus.REJECTED, userId: user3.id } }),
+    prisma.bookSuggestion.create({
+      data: {
+        title: 'Clean Code',
+        author: 'Robert C. Martin',
+        note: 'Great for students',
+        status: SuggestionStatus.PENDING,
+        userId: user1.id,
+      },
+    }),
+    prisma.bookSuggestion.create({
+      data: {
+        title: 'Atomic Habits',
+        author: 'James Clear',
+        note: 'Highly requested',
+        status: SuggestionStatus.APPROVED,
+        userId: user2.id,
+      },
+    }),
+    prisma.bookSuggestion.create({
+      data: {
+        title: 'Some Random Book',
+        author: 'Unknown',
+        note: 'Not relevant to curriculum',
+        status: SuggestionStatus.REJECTED,
+        userId: user3.id,
+      },
+    }),
   ]);
 
   // Notifications for different types
   await Promise.all([
-    prisma.notification.create({ data: { userId: user1.id, message: 'Your reserved book is ready for pickup', type: NotificationType.RESERVATION_AVAILABLE, link: `/reservations/${awaitingPickupReservation.id}` } }),
-    prisma.notification.create({ data: { userId: user3.id, message: 'You have an unpaid fine', type: NotificationType.FINE, link: `/fines/${fine.id}` } }),
-    prisma.notification.create({ data: { userId: librarian.id, message: 'System maintenance scheduled tonight', type: NotificationType.INFO } }),
-    prisma.notification.create({ data: { userId: manager.id, message: 'High number of overdues this week', type: NotificationType.WARNING } }),
+    prisma.notification.create({
+      data: {
+        userId: user1.id,
+        message: 'Your reserved book is ready for pickup',
+        type: NotificationType.RESERVATION_AVAILABLE,
+        link: `/reservations/${awaitingPickupReservation.id}`,
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: user3.id,
+        message: 'You have an unpaid fine',
+        type: NotificationType.FINE,
+        link: `/fines/${fine.id}`,
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: librarian.id,
+        message: 'System maintenance scheduled tonight',
+        type: NotificationType.INFO,
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: manager.id,
+        message: 'High number of overdues this week',
+        type: NotificationType.WARNING,
+      },
+    }),
   ]);
 
   console.log('Seeding finished successfully!');

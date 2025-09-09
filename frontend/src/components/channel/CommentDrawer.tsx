@@ -1,49 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Typography, TextField, Button, CircularProgress, Drawer, IconButton, Avatar } from '@mui/material';
+import { Drawer, Box, Typography, IconButton, CircularProgress, TextField, Button, Avatar, Paper, Alert } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import api from '../../api';
 import { socket } from '../../api/socket';
-import type { PostComment, Post } from '../../types';
+import type { Post, PostComment } from '../../types';
 import { useAuthStore } from '../../store/auth.store';
+import CommentItem from './CommentItem';
 import toast from 'react-hot-toast';
-
-interface CommentItemProps {
-  comment: PostComment;
-  isOwnComment: boolean;
-}
-
-// Bitta izohni "chat pufakchasi" ko'rinishida chizadi
-const CommentItem: React.FC<CommentItemProps> = ({ comment, isOwnComment }) => {
-    const avatarUrl = comment.user.profilePicture ? `http://localhost:5000/public${comment.user.profilePicture}` : undefined;
-    return (
-        <Box sx={{
-            display: 'flex',
-            justifyContent: isOwnComment ? 'flex-end' : 'flex-start',
-            mb: 2,
-        }}>
-            <Box sx={{ display: 'flex', flexDirection: isOwnComment ? 'row-reverse' : 'row', alignItems: 'flex-start', gap: 1, maxWidth: '80%' }}>
-                <Avatar src={avatarUrl} sx={{ width: 32, height: 32 }}>
-                    {comment.user.firstName.charAt(0)}
-                </Avatar>
-                <Box sx={{
-                    bgcolor: isOwnComment ? 'primary.main' : 'background.paper',
-                    color: isOwnComment ? 'primary.contrastText' : 'text.primary',
-                    p: 1.5,
-                    borderRadius: (t) => t.customShape.radius.md,
-                    borderTopLeftRadius: (t) => (isOwnComment ? t.customShape.radius.lg : t.customShape.radius.sm),
-                    borderTopRightRadius: (t) => (isOwnComment ? t.customShape.radius.sm : t.customShape.radius.lg),
-                }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>
-                        {comment.user.firstName} {comment.user.lastName}
-                    </Typography>
-                    <Typography variant="body2">{comment.content}</Typography>
-                </Box>
-            </Box>
-        </Box>
-    );
-}
-
 
 interface CommentDrawerProps {
   post: Post | null;
@@ -54,106 +18,155 @@ interface CommentDrawerProps {
 const CommentDrawer: React.FC<CommentDrawerProps> = ({ post, open, onClose }) => {
   const { user } = useAuthStore();
   const [comments, setComments] = useState<PostComment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const commentListRef = useRef<HTMLDivElement>(null);
+
   const [newComment, setNewComment] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [replyTo, setReplyTo] = useState<PostComment | null>(null);
 
   const fetchComments = useCallback(async () => {
     if (!post) return;
     setLoading(true);
+    setError(null);
     try {
       const response = await api.get(`/comments/post/${post.id}`);
-      setComments(response.data.data);
-    } catch (error) {
-      toast.error("Izohlarni yuklashda xatolik yuz berdi.");
+      setComments(response.data.data || []);
+    } catch (err) {
+      setError("Izohlarni yuklashda xatolik yuz berdi.");
     } finally {
       setLoading(false);
     }
   }, [post]);
 
   useEffect(() => {
-    if (open) {
+    if (open && post) {
       fetchComments();
-      socket.emit('joinPostComments', post!.id);
-    }
+      socket.emit('joinPostComments', post.id);
 
-    const handleNewComment = (comment: PostComment) => {
-      if (comment.postId === post?.id) {
-        setComments(prev => [...prev, comment]);
-      }
-    };
+      const handleNewComment = (comment: PostComment) => {
+        setComments(prev => {
+          if (comment.parentId) {
+            const addReply = (list: PostComment[]): PostComment[] => list.map(c => c.id === comment.parentId ? { ...c, replies: [...(c.replies || []), comment] } : (c.replies ? { ...c, replies: addReply(c.replies) } : c));
+            return addReply(prev);
+          }
+          return [comment, ...prev];
+        });
+      };
+      const handleCommentDeleted = ({ commentId }: { commentId: string }) => {
+        const removeById = (list: PostComment[]): PostComment[] => list.filter(c => c.id !== commentId).map(c => (c.replies ? { ...c, replies: removeById(c.replies) } : c));
+        setComments(prev => removeById(prev));
+      };
 
-    socket.on('new_comment', handleNewComment);
+      socket.on('new_comment', handleNewComment);
+      socket.on('comment_deleted', handleCommentDeleted);
 
-    return () => {
-      if (post) {
+      return () => {
         socket.emit('leavePostComments', post.id);
-      }
-      socket.off('new_comment', handleNewComment);
-    };
-  }, [post, open, fetchComments]);
-
-  // Har safar yangi izoh kelganda pastga scroll qilish
-  useEffect(() => {
-    if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        socket.off('new_comment', handleNewComment);
+        socket.off('comment_deleted', handleCommentDeleted);
+      };
     }
-  }, [comments]);
+  }, [open, post, fetchComments]);
 
+  const handleScrollToComment = (commentId: string) => {
+    const element = commentListRef.current?.querySelector(`#comment-${commentId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !post) return;
+    setSubmitting(true);
     try {
       await api.post('/comments', {
         content: newComment,
         postId: post.id,
+        parentId: replyTo?.id || null,
       });
       setNewComment('');
+      setReplyTo(null);
     } catch (error) {
       toast.error("Izoh yuborishda xatolik yuz berdi.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await api.delete(`/comments/${commentId}`);
+      toast.success('Izoh o\'chirildi');
+    } catch (error) {
+      toast.error("Izohni o'chirishda xatolik yuz berdi.");
     }
   };
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box sx={{ width: { xs: '100vw', sm: 400 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Sarlavha */}
+      <Box sx={{ width: { xs: '100vw', sm: 400 }, display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Izohlar</Typography>
+          <Typography variant="h6">Izohlar</Typography>
           <IconButton onClick={onClose}><CloseIcon /></IconButton>
         </Box>
 
-        {/* Izohlar lentasi */}
-        <Box ref={scrollRef} sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
-          {loading ? <CircularProgress sx={{ display: 'block', m: 'auto' }} /> : (
-            comments.length > 0 ? (
-              comments.map(comment => (
-                <CommentItem key={comment.id} comment={comment} isOwnComment={user?.id === comment.user.id} />
-              ))
-            ) : (
-              <Typography color="text.secondary" sx={{ textAlign: 'center' }}>Hali izohlar mavjud emas.</Typography>
-            )
-          )}
+        <Box ref={commentListRef} sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+          {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
+            : error ? <Alert severity="error">{error}</Alert>
+            : comments.length === 0 ? <Typography color="text.secondary" textAlign="center" sx={{ pt: 4 }}>Hali izohlar yo'q.</Typography>
+            : <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {comments.map(comment => (
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    allComments={comments}
+                    onReply={setReplyTo}
+                    onDelete={handleDeleteComment}
+                    // --- XATOLIK TUZATILDI: Majburiy prop uzatildi ---
+                    onScrollToComment={handleScrollToComment}
+                    channelOwnerId={post?.channel?.ownerId}
+                  />
+                ))}
+              </Box>
+          }
         </Box>
 
-        {/* Izoh yozish formasi */}
-        <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Paper sx={{ p: 2, borderTop: 1, borderColor: 'divider' }} elevation={4}>
+          {replyTo && (
+            <Box sx={{ mb: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" color="text.secondary">
+                <span style={{ fontWeight: 'bold' }}>{replyTo.user.firstName}</span>ga javob...
+              </Typography>
+              <IconButton size="small" onClick={() => setReplyTo(null)}><CloseIcon fontSize="inherit" /></IconButton>
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Avatar src={user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : undefined}>
+              {user?.firstName?.charAt(0)}
+            </Avatar>
             <TextField
               fullWidth
               multiline
               maxRows={4}
-              variant="outlined"
               placeholder="Izoh yozing..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
+              disabled={submitting}
               size="small"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmitComment();
+                }
+              }}
             />
-            <Button variant="contained" onClick={handleSubmitComment} sx={{ p: 1 }}>
-              <SendIcon />
-            </Button>
+            <IconButton color="primary" onClick={handleSubmitComment} disabled={!newComment.trim() || submitting}>
+              {submitting ? <CircularProgress size={24} /> : <SendIcon />}
+            </IconButton>
           </Box>
-        </Box>
+        </Paper>
       </Box>
     </Drawer>
   );

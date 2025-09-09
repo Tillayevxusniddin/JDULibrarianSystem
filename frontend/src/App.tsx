@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { useUiStore } from './store/ui.store.js';
+import { ScrollProvider } from './contexts/ScrollContext.js';
 import { getDesignTokens } from './theme.js';
 import { socket } from './api/socket.js'; // Socket mijozini import qilamiz
 
@@ -54,16 +55,18 @@ function App() {
   const theme = useMemo(() => createTheme(getDesignTokens(themeMode)), [themeMode]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppRouter />
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-        }}
-      />
-    </ThemeProvider>
+    <ScrollProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppRouter />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+          }}
+        />
+      </ThemeProvider>
+    </ScrollProvider>
   );
 }
 

@@ -1,14 +1,12 @@
 import cron from 'node-cron';
 import prisma from '../config/db.config.js';
 import { LoanStatus, NotificationType } from '@prisma/client';
-import { getIo } from '../utils/socket.js'; // Socket yordamchisini import qilamiz
-
-const FINE_AMOUNT = 5000;
+import { getIo } from '../utils/socket.js';
+import { FINE_AMOUNT } from '../config/constants.js'; // <-- KONSTANTA IMPORT QILINDI
 
 export const startDueDateChecker = () => {
   console.log('🗓️ Due date checker cron job enabled.');
 
-  // Har kuni tungi soat 1 da ishga tushadi
   cron.schedule('0 1 * * *', async () => {
     console.log('⏳ Checking for overdue and upcoming due loans...');
     const io = getIo();
@@ -16,24 +14,27 @@ export const startDueDateChecker = () => {
     const today_start = new Date();
     today_start.setHours(0, 0, 0, 0);
 
-    const tomorrow_start = new Date();
-    tomorrow_start.setDate(tomorrow_start.getDate() + 1);
-    tomorrow_start.setHours(0, 0, 0, 0);
-
-    const tomorrow_end = new Date();
-    tomorrow_end.setDate(tomorrow_end.getDate() + 1);
-    tomorrow_end.setHours(23, 59, 59, 999);
+    // --- 1-TUZATISH: include qismi kitob nomini olish uchun to'g'rilandi ---
+    const commonInclude = {
+      bookCopy: {
+        include: {
+          book: {
+            select: { title: true }, // Faqat sarlavha kerak
+          },
+        },
+      },
+    };
 
     // Ertaga muddati tugaydigan ijaralar
     const loansDueTomorrow = await prisma.loan.findMany({
       where: {
         status: LoanStatus.ACTIVE,
         dueDate: {
-          gte: tomorrow_start,
-          lt: tomorrow_end,
+          gte: new Date(today_start.getTime() + 24 * 60 * 60 * 1000), // Ertangi kun boshlanishi
+          lt: new Date(today_start.getTime() + 48 * 60 * 60 * 1000), // Ertangi kun tugashi
         },
       },
-      include: { book: true },
+      include: commonInclude,
     });
 
     // Muddati o'tib ketgan ijaralar
@@ -42,19 +43,19 @@ export const startDueDateChecker = () => {
         status: LoanStatus.ACTIVE,
         dueDate: { lt: today_start },
       },
-      include: { book: true },
+      include: commonInclude,
     });
 
     // 1. Ertaga muddati tugaydiganlar uchun bildirishnoma yuborish
     for (const loan of loansDueTomorrow) {
+      const message = `Sizning "${loan.bookCopy.book.title}" kitobini qaytarish muddatingiz ertaga tugaydi.`;
       const newNotification = await prisma.notification.create({
         data: {
           userId: loan.userId,
-          message: `Sizning "${loan.book.title}" kitobini qaytarish muddatingiz ertaga tugaydi.`,
+          message: message,
           type: NotificationType.WARNING,
         },
       });
-      // Socket orqali real-time yuborish
       io.to(loan.userId).emit('new_notification', newNotification);
     }
 
@@ -66,14 +67,15 @@ export const startDueDateChecker = () => {
           data: { status: LoanStatus.OVERDUE },
         });
 
+        // --- 2-TUZATISH: Kitob nomiga murojaat to'g'rilandi (loan.book.title -> loan.bookCopy.book.title) ---
+        const overdueMessage = `Sizning "${loan.bookCopy.book.title}" kitobini qaytarish muddatingiz o'tib ketdi! Jarima qo'llanilishi mumkin.`;
         const newNotification = await tx.notification.create({
           data: {
             userId: loan.userId,
-            message: `Sizning "${loan.book.title}" kitobini qaytarish muddatingiz o'tib ketdi! Jarima qo'llanilishi mumkin.`,
+            message: overdueMessage,
             type: NotificationType.FINE,
           },
         });
-        // Socket orqali real-time yuborish
         io.to(loan.userId).emit('new_notification', newNotification);
 
         const existingFine = await tx.fine.findFirst({
@@ -81,10 +83,12 @@ export const startDueDateChecker = () => {
         });
 
         if (!existingFine) {
+          // --- 3-TUZATISH: Kitob nomiga murojaat to'g'rilandi ---
+          const reasonMessage = `"${loan.bookCopy.book.title}" kitobini o'z vaqtida qaytarmaganlik uchun.`;
           await tx.fine.create({
             data: {
-              amount: FINE_AMOUNT,
-              reason: `"${loan.book.title}" kitobini o'z vaqtida qaytarmaganlik uchun.`,
+              amount: FINE_AMOUNT, // <-- KONSTANTA ISHLATILDI
+              reason: reasonMessage,
               loanId: loan.id,
               userId: loan.userId,
             },

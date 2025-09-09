@@ -20,6 +20,16 @@ router.get(
   postController.getPostsByChannelIdHandler,
 );
 
+router.get('/my-posts', postController.getMyPostsHandler);
+
+router.get('/all-posts', postController.getAllPostsHandler);
+
+router.get(
+  '/:postId',
+  validate(postIdParamsSchema),
+  postController.getPostByIdHandler,
+);
+
 router.post(
   '/',
   uploadPostImage.single('postImage'),
