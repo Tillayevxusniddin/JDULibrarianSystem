@@ -3,6 +3,8 @@ import prisma from '../../config/db.config.js';
 import redisClient from '../../config/redis.config.js';
 import ApiError from '../../utils/ApiError.js';
 import { getIo } from '../../utils/socket.js';
+import { DEFAULT_BOOK_COVER } from '../../config/constants.js';
+
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
@@ -25,7 +27,7 @@ export const createBook = async (
     const newBook = await tx.book.create({
       data: {
         ...bookData,
-        coverImage: bookData.coverImage || '/public/uploads/books/default.png',
+        coverImage: bookData.coverImage || DEFAULT_BOOK_COVER,
       },
       include: { category: true },
     });

@@ -48,3 +48,25 @@ export const deletePostHandler = asyncHandler(
     res.status(204).send();
   },
 );
+
+export const getMyPostsHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const posts = await postService.getMyPosts(req.user!.id);
+    res.status(200).json({ data: posts });
+  },
+);
+
+export const getAllPostsHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const posts = await postService.getAllPosts();
+    res.status(200).json({ data: posts });
+  },
+);
+
+export const getPostByIdHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { postId } = req.params;
+    const post = await postService.getPostById(postId);
+    res.status(200).json({ data: post });
+  },
+);

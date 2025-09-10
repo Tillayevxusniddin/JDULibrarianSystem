@@ -68,33 +68,124 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
   const avatarUrl = user?.profilePicture ? `http://localhost:5000/public${user.profilePicture}` : undefined;
 
   return (
-    <Box>
+    <Box sx={{
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: 3,
+      border: '1px solid',
+      borderColor: 'divider',
+      p: 3,
+    }}>
       {imagePreview && (
-        <Box sx={{ position: 'relative', width: 100, mb: 1 }}>
-          <Box component="img" src={imagePreview} alt="Preview" sx={{ width: '100%', borderRadius: (t) => t.customShape.radius.sm }} />
-          <IconButton onClick={removeImage} size="small" sx={{ position: 'absolute', top: -10, right: -10, bgcolor: 'background.paper', '&:hover': { bgcolor: 'grey.200' } }}>
+        <Box sx={{ position: 'relative', width: 150, mb: 2 }}>
+          <Box 
+            component="img" 
+            src={imagePreview} 
+            alt="Preview" 
+            sx={{ 
+              width: '100%', 
+              borderRadius: 2,
+              boxShadow: (theme) => theme.shadows[4],
+            }} 
+          />
+          <IconButton 
+            onClick={removeImage} 
+            size="small" 
+            sx={{ 
+              position: 'absolute', 
+              top: -8, 
+              right: -8, 
+              bgcolor: 'error.main',
+              color: 'white',
+              '&:hover': { 
+                bgcolor: 'error.dark',
+                transform: 'rotate(90deg)',
+              },
+              transition: 'all 0.2s ease',
+              boxShadow: (theme) => theme.shadows[2],
+            }}
+          >
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
       )}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar src={avatarUrl}>{user?.firstName.charAt(0)}</Avatar>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+        <Avatar 
+          src={avatarUrl}
+          sx={{
+            width: 48,
+            height: 48,
+            border: '2px solid',
+            borderColor: 'primary.main',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              transform: 'scale(1.05)',
+            }
+          }}
+        >
+          {user?.firstName.charAt(0)}
+        </Avatar>
         <TextField
           fullWidth
           multiline
           maxRows={5}
           variant="outlined"
-          placeholder="Xabar yozing..."
+          placeholder="Nima haqida o'ylayapsiz?"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          sx={(t) => ({ '& .MuiOutlinedInput-root': { borderRadius: t.customShape.radius.xl } })}
+          sx={{
+            '& .MuiOutlinedInput-root': { 
+              borderRadius: 3,
+              bgcolor: 'background.default',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                boxShadow: (theme) => theme.shadows[2],
+              },
+              '&.Mui-focused': {
+                boxShadow: (theme) => theme.shadows[4],
+                transform: 'translateY(-1px)',
+              }
+            }
+          }}
         />
-        <IconButton color="primary" component="label" disabled={loading}>
+        <IconButton 
+          color="primary" 
+          component="label" 
+          disabled={loading}
+          sx={{
+            bgcolor: 'primary.light',
+            '&:hover': {
+              bgcolor: 'primary.main',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.2s ease',
+          }}
+        >
           <PhotoCameraIcon />
           <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileChange} />
         </IconButton>
-        <Button variant="contained" onClick={handleSubmit} disabled={loading} endIcon={<SendIcon />}>
-          {loading ? <CircularProgress size={24} color="inherit" /> : "Yuborish"}
+        <Button 
+          variant="contained" 
+          onClick={handleSubmit} 
+          disabled={loading || (!content.trim() && !postImage)} 
+          endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            py: 1.5,
+            background: 'linear-gradient(45deg, #3B82F6, #8B5CF6)',
+            '&:hover': {
+              background: 'linear-gradient(45deg, #2563EB, #7C3AED)',
+              transform: 'translateY(-1px)',
+              boxShadow: (theme) => theme.shadows[4],
+            },
+            '&:disabled': {
+              background: 'grey.300',
+            },
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {loading ? "Yuborilmoqda..." : "Yuborish"}
         </Button>
       </Box>
     </Box>

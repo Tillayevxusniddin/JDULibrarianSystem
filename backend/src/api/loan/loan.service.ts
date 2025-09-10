@@ -9,6 +9,7 @@ import {
   ReservationStatus,
 } from '@prisma/client';
 import { getIo } from '../../utils/socket.js';
+import { BORROWING_LIMIT, LOAN_DURATION_DAYS } from '../../config/constants.js';
 
 /**
  * Kitob nusxasini shtrix-kodi bo'yicha ijaraga beradi.
@@ -16,8 +17,6 @@ import { getIo } from '../../utils/socket.js';
  * @param userId - Ijaraga olayotgan foydalanuvchining IDsi
  */
 export const createLoan = async (barcode: string, userId: string) => {
-  const BORROWING_LIMIT = 3;
-
   return prisma.$transaction(async (tx) => {
     // 1. Foydalanuvchining shaxsiy cheklovlarini tekshirish
     const activeLoansCount = await tx.loan.count({
@@ -87,7 +86,7 @@ export const createLoan = async (barcode: string, userId: string) => {
 
     // 5. Yangi ijara yozuvini yaratamiz
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 14);
+    dueDate.setDate(dueDate.getDate() + LOAN_DURATION_DAYS);
 
     return tx.loan.create({
       data: { userId, bookCopyId: bookCopy.id, dueDate, status: 'ACTIVE' },
@@ -127,7 +126,9 @@ export const findUserLoans = async (
 /**
  * Barcha ijralar ro'yxatini oladi.
  */
-export const findAllLoans = async (filter?: 'pending' | 'renewal' | 'active' | 'history') => {
+export const findAllLoans = async (
+  filter?: 'pending' | 'renewal' | 'active' | 'history',
+) => {
   const where: Prisma.LoanWhereInput = {};
 
   if (filter === 'pending') where.status = 'PENDING_RETURN';
@@ -139,7 +140,9 @@ export const findAllLoans = async (filter?: 'pending' | 'renewal' | 'active' | '
     where,
     include: {
       bookCopy: { include: { book: true } },
-      user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      user: {
+        select: { id: true, firstName: true, lastName: true, email: true },
+      },
     },
     orderBy: { borrowedAt: 'desc' },
   });

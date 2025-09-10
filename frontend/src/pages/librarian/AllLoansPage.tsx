@@ -58,7 +58,7 @@ const AllLoansPage: React.FC = () => {
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
         Ijaralarni Boshqarish
       </Typography>
-      <Paper sx={{ overflow: 'hidden' }}>
+      <Paper sx={{ borderRadius: 4, overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={filter} onChange={(_, newValue) => setFilter(newValue)} variant="fullWidth" sx={{
               '& .MuiTab-root': {

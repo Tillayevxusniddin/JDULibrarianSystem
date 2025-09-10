@@ -5,6 +5,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 import ProtectedRoute from './ProtectedRoute';
 import BooksPage from '../pages/BooksPage';
 import BookDetailPage from '../pages/BookDetailPage';
+import PostDetailPage from '../pages/PostDetailPage';
 import LibrarianRoute from './LibrarianRoute';
 import ManagerRoute from './ManagerRoute';
 import UsersPage from '../pages/librarian/UsersPage';
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
       {
         path: '/channels/:linkName',
         element: <ChannelViewPage />
+      },
+      {
+        path: '/channels/:channelId/posts/:postId',
+        element: <PostDetailPage />
       },
       {
         path: '/',
