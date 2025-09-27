@@ -1,8 +1,10 @@
 import { User, Prisma } from '@prisma/client';
 import prisma from '../../config/db.config.js';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import ApiError from '../../utils/ApiError.js';
+import { Profile } from 'passport-google-oauth20';
 import fs from 'fs';
 import path from 'path';
 
@@ -178,4 +180,33 @@ export const updateProfilePicture = async (
     },
   });
   return updatedUser;
+};
+
+export const authenticateGoogleUser = async (
+  profile: Profile,
+): Promise<Omit<User, 'password'>> => {
+  if (!profile.emails || !profile.emails[0]) {
+    throw new ApiError(
+      400,
+      "Google profili email manzilini o'z ichiga olmagan.",
+    );
+  }
+
+  const email = profile.emails[0].value;
+
+  // 1. Foydalanuvchini bazadan qidiramiz
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  // 2. AGAR FOYDALANUVCHI TOPILMASA, XATOLIK YUBORAMIZ (YANGI AKKAUNT YARATMAYMIZ!)
+  if (!user) {
+    // Bu xatolik passport.js tomonidan ushlanadi va foydalanuvchi login sahifasiga qaytariladi
+    throw new ApiError(
+      403,
+      "Bu Google akkaunti tizimda ro'yxatdan o'tmagan. Iltimos, kutubxonachiga murojaat qiling.",
+    );
+  }
+
+  // 3. Agar foydalanuvchi topilsa, uni qaytaramiz
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
 };

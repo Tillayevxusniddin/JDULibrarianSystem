@@ -8,6 +8,7 @@ import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpecs } from './config/swagger.config.js';
 import { initializeSocket } from './utils/socket.js';
+import passport from './config/passport.config.js';
 
 import { startDueDateChecker } from './jobs/dueDateChecker.js';
 import { startReservationChecker } from './jobs/reservationChecker.js';
@@ -33,6 +34,7 @@ import kintoneRouter from './api/kintone/kintone.route.js';
 dotenv.config();
 
 const app: Application = express();
+app.use(passport.initialize());
 
 app.use(cors());
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));

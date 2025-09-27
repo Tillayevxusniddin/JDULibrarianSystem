@@ -2,6 +2,13 @@ import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import * as authService from './auth.service.js';
 import ApiError from '../../utils/ApiError.js';
+import { User, Role } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+
+interface AuthenticatedUser {
+  id: string;
+  role: Role;
+}
 
 export const registerUserHandler = async (req: Request, res: Response) => {
   try {
@@ -14,6 +21,29 @@ export const registerUserHandler = async (req: Request, res: Response) => {
     return res.status(409).json({ message: error.message });
   }
 };
+
+export const googleCallbackHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/login?error=google-auth-failed`,
+      );
+    }
+
+    // Endi TypeScript user.id borligini aniq biladi va xatolik bo'lmaydi.
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: parseInt(process.env.JWT_EXPIRES_IN || '3600', 10) },
+    );
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/google-callback?token=${token}`,
+    );
+  },
+);
 
 export const loginUserHandler = async (req: Request, res: Response) => {
   try {

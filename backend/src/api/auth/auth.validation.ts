@@ -29,9 +29,7 @@ export const updateProfileSchema = z.object({
       .string()
       .min(2, 'Familiya kamida 2 belgidan iborat bo`lishi kerak')
       .optional(),
-    // Foydalanuvchi email yoki rolini o'zi o'zgartira olmaydi
   }),
-  // ...
 });
 
 export const changePasswordSchema = z.object({
@@ -47,6 +45,6 @@ export const changePasswordSchema = z.object({
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
       message: "Passwords don't match",
-      path: ['confirmPassword'], // Xatolik qaysi maydonga tegishli ekanligini ko'rsatish
+      path: ['confirmPassword'],
     }),
 });
