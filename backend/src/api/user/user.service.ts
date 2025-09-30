@@ -8,6 +8,16 @@ import fs from 'fs'; // Fayl tizimi bilan ishlash uchun
 import path from 'path';
 import xlsx from 'xlsx';
 
+function randomPassword(length = 12): string {
+  const chars =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+  let pass = '';
+  for (let i = 0; i < length; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pass;
+}
+
 export const findAllUsers = async (
   query: { search?: string },
   pagination: { page: number; limit: number },
@@ -73,49 +83,46 @@ export const searchUsers = async (searchTerm: string) => {
   });
 };
 
-export const createUser = async (input: Prisma.UserCreateInput) => {
+export const createUser = async (
+  input: Omit<Prisma.UserCreateInput, 'password'>,
+) => {
   const existingUser = await prisma.user.findUnique({
     where: { email: input.email },
   });
   if (existingUser) {
-    throw new ApiError(409, 'This email is already in use.');
+    throw new ApiError(409, 'Bu email manzil allaqachon ishlatilgan.');
   }
 
-  // Muhim: Parolni xeshlashdan oldin, uni email'ga yuborish uchun saqlab qolamiz
-  const plainPassword = input.password;
-
+  // 1. Tasodifiy parol generatsiya qilamiz
+  const plainPassword = randomPassword();
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
   const user = await prisma.user.create({
     data: {
       ...input,
-      password: hashedPassword,
+      password: hashedPassword, // Xeshlangan parolni saqlaymiz
     },
   });
 
-  // --- YANGI QO'SHIMCHA: EMAIL YUBORISH ---
+  // 2. Foydalanuvchiga yangi parolni email orqali jo'natamiz
   try {
     await sendEmail({
       to: user.email,
-      subject: 'Welcome to the University Library System!',
+      subject: 'Kutubxona Tizimiga Xush Kelibsiz!',
       html: `
-        <h1>Welcome, ${user.firstName}!</h1>
-        <p>Your account has been created successfully by a librarian.</p>
-        <p>You can now log in using the following credentials:</p>
+        <h1>Assalomu alaykum, ${user.firstName}!</h1>
+        <p>Siz uchun kutubxona tizimida yangi akkaunt yaratildi.</p>
+        <p>Tizimga kirish uchun quyidagi ma'lumotlardan foydalanishingiz mumkin:</p>
         <ul>
           <li><strong>Email:</strong> ${user.email}</li>
-          <li><strong>Password:</strong> ${plainPassword}</li>
+          <li><strong>Parol:</strong> ${plainPassword}</li>
         </ul>
-        <p>We recommend changing your password after your first login.</p>
-        <br>
-        <p>Thank you!</p>
+        <p>Tizimga birinchi marta kirganingizdan so'ng parolni o'zgartirishni tavsiya etamiz.</p>
       `,
     });
   } catch (error) {
     console.error(`Foydalanuvchi ${user.email} uchun email yuborilmadi.`);
-    // Bu yerda xatolik bo'lsa ham, foydalanuvchi yaratilgani uchun jarayonni to'xtatmaymiz.
   }
-  // --- QO'SHIMCHA TUGADI ---
 
   const { password, ...userWithoutPassword } = user;
   return userWithoutPassword;
@@ -215,33 +222,40 @@ export const bulkCreateUsers = async (fileBuffer: Buffer) => {
     throw new ApiError(400, 'Excel fayli bo`sh yoki noto`g`ri formatda.');
   }
 
-  // Barcha kerakli maydonlar borligini tekshirish
-  for (const user of usersJson) {
-    if (!user.firstName || !user.lastName || !user.email || !user.password) {
-      throw new ApiError(
-        400,
-        'Excel faylida barcha kerakli ustunlar (firstName, lastName, email, password) bo`lishi shart.',
+  let createdCount = 0;
+  const errors: string[] = [];
+
+  // Har bir foydalanuvchini alohida yaratamiz, chunki har biriga email jo'natishimiz kerak
+  for (const [index, userData] of usersJson.entries()) {
+    if (!userData.firstName || !userData.lastName || !userData.email) {
+      errors.push(
+        `${
+          index + 2
+        }-qatorda majburiy maydonlar (firstName, lastName, email) to'ldirilmagan.`,
       );
+      continue;
+    }
+
+    try {
+      // createUser funksiyasini qayta ishlatamiz! Bu kod takrorlanishining oldini oladi.
+      await createUser({
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        role: 'USER',
+      });
+      createdCount++;
+    } catch (error: any) {
+      // Agar createUser xato qaytarsa (masalan, email mavjud bo'lsa)
+      errors.push(`${index + 2}-qator (${userData.email}): ${error.message}`);
     }
   }
 
-  // Parollarni xeshlash
-  const usersWithHashedPasswords = await Promise.all(
-    usersJson.map(async (user) => ({
-      ...user,
-      password: await bcrypt.hash(String(user.password), 10),
-      role: 'USER', // Barcha ommaviy qo'shilganlar oddiy USER bo'ladi
-    })),
-  );
-
-  // Ommaviy tarzda bazaga qo'shish
-  // skipDuplicates: true - agar email allaqachon mavjud bo'lsa, xatolik bermasdan o'tkazib yuboradi
-  const result = await prisma.user.createMany({
-    data: usersWithHashedPasswords,
-    skipDuplicates: true,
-  });
-
-  return result; // Bu yerda nechta yozuv qo'shilgani haqida ma'lumot qaytadi
+  return {
+    totalInFile: usersJson.length,
+    successfullyCreated: createdCount,
+    errors: errors,
+  };
 };
 
 export const updateUserPremiumStatus = async (

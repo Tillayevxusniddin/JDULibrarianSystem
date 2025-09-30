@@ -1,7 +1,12 @@
 import prisma from '../../config/db.config.js';
 import bcrypt from 'bcrypt';
-import { fetchAllKintoneRecords, getValue } from '../../utils/kintone.client.js';
+import {
+  fetchAllKintoneRecords,
+  getValue,
+} from '../../utils/kintone.client.js';
+import { sendEmail } from '../../utils/sendEmail.js';
 
+// Natijalarni qaytarish uchun interfeys
 interface SyncResult {
   created: number;
   updated: number;
@@ -9,25 +14,40 @@ interface SyncResult {
   totalFromKintone: number;
 }
 
+/**
+ * Tasodifiy, xavfsiz parol generatsiya qiladi.
+ * @param length Parol uzunligi (standart 12).
+ * @returns Tasodifiy parol (string).
+ */
 function randomPassword(length = 12): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-  let out = '';
-  for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
+  const chars =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+  let pass = '';
+  for (let i = 0; i < length; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pass;
 }
 
+/**
+ * Kintone ma'lumotlar bazasidan talabalarni sinxronizatsiya qiladi.
+ * Yangi talabalarga tasodifiy parol yaratib, email orqali jo'natadi.
+ */
 export async function syncStudentsFromKintone(): Promise<SyncResult> {
+  console.log('🔄 Kintone bilan sinxronizatsiya boshlandi...');
   const records = await fetchAllKintoneRecords();
-  let created = 0;
-  let updated = 0;
-  let skipped = 0;
+  console.log(`📊 Kintone'dan ${records.length} ta yozuv topildi.`);
+
+  const result: SyncResult = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    totalFromKintone: records.length,
+  };
 
   for (const rec of records) {
-    // Try multiple likely field codes used in the reference project
     const email =
-      getValue<string>(rec, 'mail') ||
-      getValue<string>(rec, 'email') ||
-      undefined;
+      getValue<string>(rec, 'mail') || getValue<string>(rec, 'email');
     const firstName =
       getValue<string>(rec, 'studentFirstName') ||
       getValue<string>(rec, 'firstName') ||
@@ -38,42 +58,79 @@ export async function syncStudentsFromKintone(): Promise<SyncResult> {
       '';
 
     if (!email) {
-      skipped++;
+      result.skipped++;
       continue;
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (!existing) {
-      const plain = randomPassword(12);
-      const hash = await bcrypt.hash(plain, 10);
-      await prisma.user.create({
-        data: {
-          firstName: firstName || 'Student',
-          lastName: lastName || 'User',
-          email,
-          password: hash,
-          role: 'USER',
-          status: 'ACTIVE',
-        },
-      });
-      created++;
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    // Agar foydalanuvchi bazada mavjud bo'lmasa, yangisini yaratamiz
+    if (!existingUser) {
+      try {
+        const plainPassword = randomPassword();
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+        const newUser = await prisma.user.create({
+          data: {
+            firstName: firstName || 'Student',
+            lastName: lastName || 'User',
+            email,
+            password: hashedPassword,
+            role: 'USER',
+            status: 'ACTIVE',
+          },
+        });
+        result.created++;
+        console.log(`✅ Yangi foydalanuvchi yaratildi: ${email}`);
+
+        // Yangi yaratilgan foydalanuvchiga parolni email orqali jo'natamiz
+        await sendEmail({
+          to: newUser.email,
+          subject: 'Sizning kutubxona tizimidagi akkauntingiz yaratildi!',
+          html: `
+            <h1>Assalomu alaykum, ${newUser.firstName}!</h1>
+            <p>Siz uchun universitet kutubxonasi tizimida avtomatik tarzda yangi akkaunt yaratildi.</p>
+            <p>Tizimga kirish uchun quyidagi ma'lumotlardan foydalanishingiz mumkin:</p>
+            <ul>
+              <li><strong>Email:</strong> ${newUser.email}</li>
+              <li><strong>Parol:</strong> ${plainPassword}</li>
+            </ul>
+            <p>Xavfsizlik maqsadida, tizimga birinchi marta kirganingizdan so'ng parolni o'zgartirishingizni tavsiya qilamiz.</p>
+            <p>Hurmat bilan, <br>Kutubxona Ma'muriyati</p>
+          `,
+        });
+      } catch (error) {
+        console.error(
+          `Xatolik: ${email} manzilidagi foydalanuvchini yaratish yoki email jo'natishda muammo yuz berdi.`,
+          error,
+        );
+        result.skipped++;
+      }
       continue;
     }
 
-    // If name fields changed, update minimal fields (don’t touch password)
-    const newFirst = firstName || existing.firstName;
-    const newLast = lastName || existing.lastName;
-    if (newFirst !== existing.firstName || newLast !== existing.lastName) {
+    // Agar foydalanuvchi mavjud bo'lsa, ism-familiyasini yangilaymiz
+    const needsUpdate =
+      (firstName && existingUser.firstName !== firstName) ||
+      (lastName && existingUser.lastName !== lastName);
+    if (needsUpdate) {
       await prisma.user.update({
         where: { email },
-        data: { firstName: newFirst, lastName: newLast },
+        data: {
+          firstName: firstName || existingUser.firstName,
+          lastName: lastName || existingUser.lastName,
+        },
       });
-      updated++;
+      result.updated++;
+      console.log(`🔄 Foydalanuvchi ma'lumotlari yangilandi: ${email}`);
     } else {
-      skipped++;
+      result.skipped++;
     }
   }
 
-  return { created, updated, skipped, totalFromKintone: records.length };
+  console.log(
+    '✅ Kintone bilan sinxronizatsiya muvaffaqiyatli yakunlandi.',
+    result,
+  );
+  return result;
 }
-

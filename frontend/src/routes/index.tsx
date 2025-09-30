@@ -27,7 +27,8 @@ import MyChannelPage from '../pages/MyChannelPage';
 import PremiumPage from '../pages/PremiumPage';
 import ChannelViewPage from '../pages/ChannelViewPage';
 import MySubscriptionsPage from '../pages/MySubscriptionsPage';
-import ChannelsListPage from '../pages/ChannelsListPage'; 
+import ChannelsListPage from '../pages/ChannelsListPage';
+import GoogleCallbackPage from '../pages/GoogleCallbackPage';
 
 
 
@@ -35,6 +36,10 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/google-callback', // <-- YANGI YO'L
+    element: <GoogleCallbackPage />,
   },
   {
     path: '/',
@@ -45,7 +50,7 @@ const router = createBrowserRouter([
         element: <ChannelViewPage />
       },
       {
-        path: '/channels/:channelId/posts/:postId',
+        path: '/posts/:postId',
         element: <PostDetailPage />
       },
       {

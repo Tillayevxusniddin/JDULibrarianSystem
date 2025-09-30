@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Link } from '@mui/material';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert, Link } from '@mui/material';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -12,11 +12,11 @@ interface BulkUserUploadModalProps {
 
 const BulkUserUploadModal: React.FC<BulkUserUploadModalProps> = ({ open, onClose, onSuccess }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setSelectedFile(e.target.files[0]);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setSelectedFile(event.target.files[0]);
     }
   };
 
@@ -25,7 +25,7 @@ const BulkUserUploadModal: React.FC<BulkUserUploadModalProps> = ({ open, onClose
       toast.error('Iltimos, avval faylni tanlang.');
       return;
     }
-    setLoading(true);
+    setSubmitting(true);
     const formData = new FormData();
     formData.append('usersFile', selectedFile);
 
@@ -33,41 +33,68 @@ const BulkUserUploadModal: React.FC<BulkUserUploadModalProps> = ({ open, onClose
       const response = await api.post('/users/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      toast.success(response.data.message);
+      
+      const { successfullyCreated, errors } = response.data.data;
+      
+      let message = '';
+      if (successfullyCreated > 0) {
+        message += `${successfullyCreated} ta foydalanuvchi muvaffaqiyatli yaratildi. `;
+        toast.success(`${successfullyCreated} ta foydalanuvchi muvaffaqiyatli yaratildi.`);
+      }
+      if (errors && errors.length > 0) {
+        message += `Ba'zi yozuvlarda xatolik yuz berdi.`;
+        toast.error(`Faylda ${errors.length} ta xatolik topildi. Tafsilotlar uchun konsolni tekshiring.`);
+        console.error("Ommaviy yuklashdagi xatoliklar:", errors);
+      }
+      
       onSuccess();
-    } catch (error: any) {
-      const message = error.response?.data?.message || "Faylni yuklashda xatolik yuz berdi.";
-      toast.error(message);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Faylni yuklashda xatolik yuz berdi.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
+      setSelectedFile(null); // Faylni tozalash
     }
   };
 
+  // Modal yopilganda tanlangan faylni tozalash
+  const handleClose = () => {
+    setSelectedFile(null);
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ fontWeight: 'bold' }}>Foydalanuvchilarni Ommaviy Qo'shish</DialogTitle>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+      <DialogTitle sx={{ fontWeight: 'bold' }}>Excel Orqali Ommaviy Qo'shish</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Foydalanuvchilarni qo'shish uchun, iltimos, kerakli ustunlarga ega Excel faylini yuklang.
-          Ustunlar sarlavhalari: <strong>firstName, lastName, email, password</strong>.
-        </Typography>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            Excel faylida quyidagi ustunlar bo'lishi shart: <strong>firstName</strong>, <strong>lastName</strong>, <strong>email</strong>.
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+            DIQQAT: Parol ustuni kerak EMAS. Tizim har bir foydalanuvchi uchun avtomatik parol yaratib, emailiga jo'natadi.
+          </Typography>
+        </Alert>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          <Link href="/templates/users_template.xlsx" download>
+          {/* Bu yerga shablon faylingizga to'g'ri yo'lni qo'yasiz, masalan /templates/users_template.xlsx */}
+          <Link href="/path/to/your/template.xlsx" download>
             Excel shablonini yuklab olish
           </Link>
         </Typography>
-        <Box sx={{ border: '2px dashed', borderColor: 'divider', p: 3, textAlign: 'center', borderRadius: (t) => t.customShape.radius.sm }}>
-          <Button variant="contained" component="label" startIcon={<UploadFileIcon />}>
-            Fayl Tanlash
-            <input type="file" hidden onChange={handleFileChange} accept=".xls,.xlsx" />
-          </Button>
-          {selectedFile && <Typography sx={{ mt: 2 }}>Tanlangan fayl: {selectedFile.name}</Typography>}
-        </Box>
+        <Button
+          fullWidth
+          variant="outlined"
+          component="label"
+          startIcon={<FileUploadIcon />}
+          sx={{ mt: 2, textTransform: 'none', p: 2, borderStyle: 'dashed' }}
+        >
+          {selectedFile ? `Tanlandi: ${selectedFile.name}` : "Excel Faylni Tanlang (.xlsx, .xls)"}
+          <input type="file" hidden accept=".xlsx, .xls" onChange={handleFileChange} />
+        </Button>
       </DialogContent>
-      <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
-        <Button onClick={onClose} disabled={loading}>Bekor qilish</Button>
-        <Button onClick={handleUpload} variant="contained" disabled={!selectedFile || loading}>
-          {loading ? <CircularProgress size={24} /> : "Yuklash"}
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={handleClose}>Bekor qilish</Button>
+        <Button onClick={handleUpload} variant="contained" disabled={!selectedFile || submitting}>
+          {submitting ? <CircularProgress size={24} /> : "Yuklash"}
         </Button>
       </DialogActions>
     </Dialog>

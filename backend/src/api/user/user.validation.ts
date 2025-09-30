@@ -10,9 +10,9 @@ export const createUserSchema = z.object({
       .string()
       .min(2, 'Familiya kamida 2 belgidan iborat bo`lishi kerak'),
     email: z.string().email('Yaroqli email manzil kiriting'),
-    password: z
-      .string()
-      .min(6, 'Parol kamida 6 belgidan iborat bo`lishi kerak'),
+    // password: z
+    //   .string()
+    //   .min(6, 'Parol kamida 6 belgidan iborat bo`lishi kerak'),
     role: z.nativeEnum(Role).optional(),
   }),
   query: emptySchema,

@@ -6,6 +6,7 @@ import {
   updateProfileHandler,
   changePasswordHandler,
   updateProfilePictureHandler,
+  googleCallbackHandler,
 } from './auth.controller.js';
 import {
   createUserSchema,
@@ -16,6 +17,7 @@ import { updateProfileSchema } from './auth.validation.js';
 import validate from '../../middlewares/validate.middleware.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { uploadAvatar } from '../../middlewares/uploadAvatar.middleware.js';
+import passport from '../../config/passport.config.js';
 
 const router = Router();
 
@@ -191,6 +193,23 @@ router.put(
   authenticate,
   uploadAvatar.single('profilePicture'), // Middleware'ni shu yerda ishlatamiz
   updateProfilePictureHandler,
+);
+
+router.get(
+  '/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false,
+  }),
+);
+
+router.get(
+  '/google/callback',
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=true`,
+  }),
+  googleCallbackHandler,
 );
 
 export default router;
