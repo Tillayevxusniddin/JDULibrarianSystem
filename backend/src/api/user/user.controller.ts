@@ -62,8 +62,9 @@ export const bulkCreateUsersHandler = asyncHandler(
       throw new ApiError(400, 'Excel fayli yuklanmadi.');
     }
     const result = await userService.bulkCreateUsers(req.file.buffer);
+    const message = `${result.successfullyCreated} ta yangi foydalanuvchi muvaffaqiyatli qo'shildi.`;
     res.status(201).json({
-      message: `${result.count} ta yangi foydalanuvchi muvaffaqiyatli qo'shildi.`,
+      message: message,
       data: result,
     });
   },
@@ -76,11 +77,9 @@ export const updateUserPremiumStatusHandler = asyncHandler(
 
     await userService.updateUserPremiumStatus(id, isPremium);
 
-    res
-      .status(200)
-      .json({
-        message:
-          "Foydalanuvchining premium statusi muvaffaqiyatli o'zgartirildi.",
-      });
+    res.status(200).json({
+      message:
+        "Foydalanuvchining premium statusi muvaffaqiyatli o'zgartirildi.",
+    });
   },
 );

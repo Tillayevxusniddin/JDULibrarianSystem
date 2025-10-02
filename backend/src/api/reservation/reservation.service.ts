@@ -1,6 +1,6 @@
 import prisma from '../../config/db.config.js';
 import ApiError from '../../utils/ApiError.js';
-import redisClient from '@/config/redis.config.js';
+import redisClient from '../../config/redis.config.js';
 import { getIo } from '../../utils/socket.js';
 import { NotificationType } from '@prisma/client';
 

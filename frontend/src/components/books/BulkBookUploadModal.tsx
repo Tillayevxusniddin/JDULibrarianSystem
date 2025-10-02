@@ -53,8 +53,8 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
           "barcodes" ustuniga har bir nusxaning shtrix-kodini vergul (,) bilan ajratib yozing.
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          <Link href="/templates/books_template.xlsx" download>
-            Excel shablonini yuklab olish
+          <Link href={`${import.meta.env.VITE_API_URL.replace('/api/v1', '')}/public/templates/books_template.xlsx`} download>
+                        Excel shablonini yuklab olish
           </Link>
         </Typography>
         <Box sx={{ border: '2px dashed', borderColor: 'divider', p: 3, textAlign: 'center', borderRadius: (t) => t.customShape.radius.sm }}>
