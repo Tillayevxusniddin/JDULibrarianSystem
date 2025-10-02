@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: library_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Ishonchli tarmoqlarda portni ochmaslik tavsiya etiladi
+
+  redis:
+    image: redis:7-alpine
+    container_name: library_redis_prod
+    restart: always
+    volumes:
+      - redis_data_prod:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: library_api_prod
+    restart: always
+    ports:
+      - "${PORT}:5000" # Host portini .env'dan oladi
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - SES_FROM_EMAIL=${SES_FROM_EMAIL}
+      - REDIS_URL=redis://redis:6379
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:

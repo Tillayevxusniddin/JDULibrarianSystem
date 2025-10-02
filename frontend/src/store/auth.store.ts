@@ -1,3 +1,4 @@
+// frontend/src/store/auth.store.ts
 import { create } from 'zustand';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api';
@@ -31,16 +32,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useNotificationStore.getState().clearNotifications();
     localStorage.setItem('authToken', token);
     set({ token });
+
     try {
       const response = await api.get<User>('/auth/me');
       const userData = response.data;
       set({ user: userData });
 
-      // --- YECHIM: Tizimga kirgandan so'ng bildirishnomalarni yuklaymiz ---
-      useNotificationStore.getState().fetchNotifications();
+      // ✅ O'ZGARISH: Socketni shu yerda ishga tushiramiz
+      if (socket.disconnected) {
+        socket.auth = { token };
+        socket.connect();
+      }
+      // -------------------------------------------------
 
-      socket.emit('joinRoom', userData.id);
       console.log('🏠 Joined personal room:', userData.id);
+
+      // Bildirishnomalarni yuklash
+      useNotificationStore.getState().fetchNotifications();
     } catch (error) {
       localStorage.removeItem('authToken');
       console.error('Login failed after setting token:', error);
@@ -52,7 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('authToken');
     set({ token: null, user: null });
     useNotificationStore.getState().clearNotifications();
-    socket.disconnect(); // Socket'ni uzish ham muhim
+    socket.disconnect(); // ✅ socketni uzamiz
   },
 
   checkAuth: async () => {
@@ -63,16 +71,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (decoded.exp * 1000 < Date.now()) {
           throw new Error('Token expired');
         }
+
         set({ token });
         const response = await api.get<User>('/auth/me');
         const userData = response.data;
         set({ user: userData });
 
-        // --- YECHIM: Sahifa yangilanganda ham bildirishnomalarni yuklaymiz ---
-        useNotificationStore.getState().fetchNotifications();
+        // ✅ O'ZGARISH: Socketni bu yerda ham ishga tushiramiz
+        if (socket.disconnected) {
+          socket.auth = { token };
+          socket.connect();
+        }
+        // -----------------------------------------------
 
-        socket.emit('joinRoom', userData.id);
         console.log('🏠 Rejoined personal room:', userData.id);
+
+        // Bildirishnomalarni yuklash
+        useNotificationStore.getState().fetchNotifications();
       } catch (error) {
         console.log(error);
         get().logout();
@@ -105,7 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
-// SOCKET EVENT HANDLER'LAR (o'zgarishsiz qoladi)
+// Socket event handlers
 let eventHandlersRegistered = false;
 
 const registerSocketHandlers = () => {
@@ -117,7 +132,6 @@ const registerSocketHandlers = () => {
   socket.on('new_notification', (newNotification) => {
     console.log('📢 New notification received:', newNotification);
     useNotificationStore.getState().addNotification(newNotification);
-    // Bu yerga ham checkAuth qo'shish mumkin, lekin bu ortiqcha bo'lishi mumkin
     useAuthStore.getState().checkAuth();
   });
 
@@ -144,7 +158,3 @@ const registerSocketHandlers = () => {
 socket.on('connect', () => {
   registerSocketHandlers();
 });
-
-if (socket.connected) {
-  registerSocketHandlers();
-}

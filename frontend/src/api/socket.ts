@@ -1,18 +1,22 @@
-// frontend/src/api/socket.ts
 import { io } from 'socket.io-client';
 
-const URL = import.meta.env.VITE_SOCKET_URL;
+const URL = import.meta.env.VITE_SOCKET_URL!;
 
-export const socket = io(URL!, {
-  autoConnect: true, // AUTO CONNECT qilish
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
+export const socket = io(URL, {
+  // Avtomatik ulanishni o'chirib qo'yamiz. Faqat login qilgandan keyin o'zimiz ulaymiz.
+  autoConnect: false,
+
+  // Har bir ulanish urinishida "auth" funksiyasi ishga tushadi
+  // va tokenni olib, serverga yuboradi.
+  auth: (cb) => {
+    cb({
+      token: localStorage.getItem('authToken'),
+    });
+  },
 });
 
-// Debug uchun
 socket.on('connect', () => {
-  console.log('✅ Socket connected:', socket.id);
+  console.log('✅ Socket connected with token:', socket.id);
 });
 
 socket.on('disconnect', (reason) => {
@@ -20,5 +24,6 @@ socket.on('disconnect', (reason) => {
 });
 
 socket.on('connect_error', (error) => {
-  console.error('🔥 Socket connection error:', error);
+  // Eng muhim xatoliklardan biri
+  console.error('🔥 Socket connection error:', error.message);
 });

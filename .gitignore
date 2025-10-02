@@ -44,3 +44,7 @@ bun.lock
 AGENTS.md
 GEMINI.md
 CLAUDE.md
+
+
+# SSH/SCP 
+ubuntu@*

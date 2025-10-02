@@ -1,7 +1,7 @@
 import prisma from '../../config/db.config.js';
 import ApiError from '../../utils/ApiError.js';
 import { Prisma } from '@prisma/client';
-import redisClient from '@/config/redis.config.js';
+import redisClient from '../../config/redis.config.js';
 import {
   NotificationType,
   BookCopyStatus,
