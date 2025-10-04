@@ -34,8 +34,8 @@ export const updateMyChannelHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const updateData = req.body;
     if (req.file) {
-      updateData.logoImage =
-        '/' + req.file.path.replace(/\\/g, '/').replace('public/', '');
+      const file = req.file as any;
+      updateData.logoImage = file.location; // <-- S3 URL'ni olamiz
     }
     const channel = await channelService.updateMyChannel(
       req.user!.id,

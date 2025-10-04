@@ -5,9 +5,12 @@
 import { BookCopyStatus, LoanStatus, ReservationStatus } from '@prisma/client';
 
 // Fayl yo'llari
-export const DEFAULT_BOOK_COVER = '/public/uploads/books/default.png';
-export const DEFAULT_AVATAR = '/public/uploads/avatars/default.png';
-export const DEFAULT_CHANNEL_LOGO = '/public/uploads/logos/default.png';
+export const DEFAULT_BOOK_COVER =
+  'https://library-system-assets.s3.ap-northeast-1.amazonaws.com/uploads/books/default.png';
+export const DEFAULT_AVATAR =
+  'https://library-system-assets.s3.ap-northeast-1.amazonaws.com/uploads/avatars/default.png';
+export const DEFAULT_CHANNEL_LOGO =
+  'https://library-system-assets.s3.ap-northeast-1.amazonaws.com/uploads/logos/default.png';
 
 // Kutubxona qoidalari
 export const BORROWING_LIMIT = 3; // Bir foydalanuvchi bir vaqtda nechta kitob olishi mumkin

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 import validate from '../../middlewares/validate.middleware.js';
-import { uploadPostImage } from '../../middlewares/uploadPostImage.middleware.js';
+import { uploadToS3 } from '../../utils/s3.service.js';
 import * as postController from './post.controller.js';
 import {
   createPostSchema,
@@ -32,16 +32,18 @@ router.get(
 
 router.post(
   '/',
-  uploadPostImage.single('postImage'),
+  uploadToS3.single('postImage'), // <-- YANGI
   validate(createPostSchema),
   postController.createPostHandler,
 );
+
 router.put(
   '/:postId',
-  uploadPostImage.single('postImage'), // <-- YANGI MIDDLEWARE QO'SHILDI
+  uploadToS3.single('postImage'), // <-- YANGI
   validate(updatePostSchema),
   postController.updatePostHandler,
 );
+
 router.delete(
   '/:postId',
   validate(postIdParamsSchema),

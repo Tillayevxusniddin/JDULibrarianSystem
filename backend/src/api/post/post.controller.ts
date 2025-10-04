@@ -7,10 +7,8 @@ export const createPostHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const postData = req.body;
     if (req.file) {
-      // --- YECHIM: Endi 'public/' qismini olib tashlamaymiz ---
-      postData.postImage = '/' + req.file.path.replace(/\\/g, '/');
-    } else {
-      postData.postImage = '/public/uploads/posts/defaultpost.png';
+      const file = req.file as any;
+      postData.postImage = file.location; // <-- S3 URL'ni olamiz
     }
     const post = await postService.createPost(postData, req.user!.id);
     res.status(201).json({ data: post });
@@ -29,10 +27,9 @@ export const updatePostHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { postId } = req.params;
     const updateData = req.body;
-
     if (req.file) {
-      // --- YECHIM: Bu yerda ham 'public/' qismini olib tashlamaymiz ---
-      updateData.postImage = '/' + req.file.path.replace(/\\/g, '/');
+      const file = req.file as any;
+      updateData.postImage = file.location; // <-- S3 URL'ni olamiz
     }
     const post = await postService.updatePost(postId, req.user!.id, updateData);
     res
