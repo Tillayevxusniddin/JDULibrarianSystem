@@ -3,6 +3,7 @@ import ApiError from '../../utils/ApiError.js';
 import { Prisma } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { deleteFromS3 } from '../../utils/s3.service.js';
 /**
  * Foydalanuvchi uchun yangi kanal yaratadi
  */
@@ -116,40 +117,36 @@ export const updateMyChannel = async (
   const channel = await prisma.channel.findUnique({
     where: { ownerId: userId },
   });
-  if (!channel) {
-    throw new ApiError(404, 'Sizga tegishli kanal topilmadi.');
-  }
+  if (!channel) throw new ApiError(404, 'Sizga tegishli kanal topilmadi.');
 
-  // Agar yangi logotip yuklangan bo'lsa va eski logotip mavjud bo'lsa, eskisini o'chiramiz
-  if (data.logoImage && channel.logoImage) {
-    try {
-      const oldLogoPath = path.join(
-        process.cwd(),
-        channel.logoImage.substring(1),
-      );
-      if (fs.existsSync(oldLogoPath)) {
-        fs.unlinkSync(oldLogoPath);
-      }
-    } catch (err) {
-      console.error(`Eski logotipni o'chirishda xatolik: ${err}`);
-    }
-  }
+  const oldLogoImage = channel.logoImage;
 
-  return prisma.channel.update({
+  const updatedChannel = await prisma.channel.update({
     where: { ownerId: userId },
     data,
   });
+
+  // Agar yangi logo yuklangan bo'lsa, eskisini S3'dan o'chiramiz
+  if (data.logoImage && oldLogoImage) {
+    await deleteFromS3(oldLogoImage);
+  }
+
+  return updatedChannel;
 };
 
 /**
  * Kanalni o'chiradi
  */
-export const deleteMyChannel = (userId: string) => {
-  // Prisma sxemasidagi "onDelete: Cascade" tufayli, kanal o'chirilganda
-  // unga tegishli barcha postlar, izohlar, reaksiyalar va obunalar ham avtomatik o'chiriladi.
-  return prisma.channel.delete({
+export const deleteMyChannel = async (userId: string) => {
+  const channel = await prisma.channel.findUnique({
     where: { ownerId: userId },
   });
+  if (!channel) return;
+  if (channel.logoImage) {
+    await deleteFromS3(channel.logoImage);
+  }
+
+  return prisma.channel.delete({ where: { ownerId: userId } });
 };
 
 export const toggleFollow = async (channelId: string, userId: string) => {

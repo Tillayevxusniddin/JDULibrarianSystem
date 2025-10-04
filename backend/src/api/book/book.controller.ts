@@ -6,8 +6,19 @@ import ApiError from '../../utils/ApiError.js';
 // Kitob "pasporti" uchun handler'lar
 export const createBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { copies, ...bookData } = req.validatedData!.body;
-    const newBook = await bookService.createBook(bookData, copies);
+    // Endi `req.body`'dan foydalanamiz, chunki `FormData` keladi
+    const { copies, ...bookData } = req.body;
+
+    // --- O'ZGARISH: Fayl bor-yo'qligini tekshiramiz ---
+    if (req.file) {
+      bookData.coverImage = (req.file as any).location; // S3 URL'ni olamiz
+    }
+
+    // Nusxalar (copies) string formatida kelishi mumkin, uni JSON'ga o'giramiz
+    const parsedCopies =
+      typeof copies === 'string' ? JSON.parse(copies) : copies;
+
+    const newBook = await bookService.createBook(bookData, parsedCopies);
     res.status(201).json(newBook);
   },
 );
@@ -38,7 +49,13 @@ export const getBookByIdHandler = asyncHandler(
 export const updateBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;
-    const updateData = req.validatedData!.body;
+    const updateData = req.body;
+
+    // --- O'ZGARISH: Fayl bor-yo'qligini tekshiramiz ---
+    if (req.file) {
+      updateData.coverImage = (req.file as any).location; // S3 URL'ni olamiz
+    }
+
     const updatedBook = await bookService.updateBook(id, updateData);
     res.status(200).json(updatedBook);
   },
@@ -51,8 +68,6 @@ export const deleteBookHandler = asyncHandler(
     res.status(204).send();
   },
 );
-
-// --- YANGI HANDLER'LAR: Kitob nusxalari uchun ---
 
 export const addBookCopyHandler = asyncHandler(
   async (req: Request, res: Response) => {

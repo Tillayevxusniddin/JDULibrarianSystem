@@ -4,6 +4,7 @@ import redisClient from '../../config/redis.config.js';
 import ApiError from '../../utils/ApiError.js';
 import { getIo } from '../../utils/socket.js';
 import { DEFAULT_BOOK_COVER } from '../../config/constants.js';
+import { deleteFromS3 } from '../../utils/s3.service.js';
 
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -19,7 +20,7 @@ import path from 'path';
  * @param copiesData - Kitob nusxalarining ro'yxati (har birining o'z shtrix-kodi bilan)
  */
 export const createBook = async (
-  bookData: Omit<Prisma.BookCreateInput, 'category'> & { categoryId: string },
+  bookData: any,
   copiesData: { barcode: string }[],
 ) => {
   return prisma.$transaction(async (tx) => {
@@ -149,14 +150,45 @@ export const findBookById = async (id: string) => {
 /**
  * Faqat kitob "pasporti" ma'lumotlarini (sarlavha, muallif va hokazo) yangilaydi.
  */
-export const updateBook = async (id: string, data: Prisma.BookUpdateInput) => {
+export const updateBook = async (id: string, data: any) => {
+  // 1. O'zgartirishdan oldin eski rasm manzilini bazadan olib qo'yamiz
+  const existingBook = await prisma.book.findUnique({
+    where: { id },
+    select: { coverImage: true },
+  });
+
+  if (!existingBook) {
+    throw new ApiError(404, 'Kitob topilmadi');
+  }
+
+  // Frontend'dan FormData orqali kelgan string qiymatlarni raqamga o'tkazamiz
+  if (data.publishedYear) {
+    data.publishedYear = parseInt(data.publishedYear, 10);
+  }
+  if (data.pageCount) {
+    data.pageCount = parseInt(data.pageCount, 10);
+  }
+
+  // 2. Ma'lumotlarni bazada yangilaymiz
   const updatedBook = await prisma.book.update({
     where: { id },
     data,
     include: { category: true },
   });
 
+  // 3. Redis keshini tozalaymiz
   await redisClient.del(`book:${id}`);
+
+  // 4. Agar yangi rasm yuklangan bo'lsa (data.coverImage mavjud)
+  // va eski rasm mavjud bo'lib, u standart rasm bo'lmasa, eskisini S3'dan o'chiramiz
+  if (
+    data.coverImage &&
+    existingBook.coverImage &&
+    existingBook.coverImage !== DEFAULT_BOOK_COVER
+  ) {
+    await deleteFromS3(existingBook.coverImage);
+  }
+
   return updatedBook;
 };
 

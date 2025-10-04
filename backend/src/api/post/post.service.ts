@@ -1,6 +1,7 @@
 import prisma from '../../config/db.config.js';
 import ApiError from '../../utils/ApiError.js';
 import { Prisma } from '@prisma/client';
+import { deleteFromS3 } from '../../utils/s3.service.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -86,30 +87,11 @@ export const updatePost = async (
   if (post.authorId !== userId)
     throw new ApiError(403, 'Faqat o`z postlaringizni tahrirlay olasiz.');
 
-  // Agar yangi rasm yuklangan bo'lsa (`data.postImage` mavjud bo'lsa)
-  // va eski rasm mavjud bo'lib, u standart rasm bo'lmasa, eskisini o'chiramiz.
-  if (
-    data.postImage &&
-    post.postImage &&
-    post.postImage !== '/public/uploads/posts/defaultpost.png'
-  ) {
-    try {
-      const oldImagePath = path.join(
-        process.cwd(),
-        post.postImage.substring(1),
-      );
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
-    } catch (err) {
-      console.error(`Eski post rasmini o'chirishda xatolik: ${err}`);
-    }
-  }
+  const oldPostImage = post.postImage;
 
-  return prisma.post.update({
+  const updatedPost = await prisma.post.update({
     where: { id: postId },
     data,
-    // Frontendga yangilangan postni to'liq qaytaramiz
     select: {
       id: true,
       content: true,
@@ -123,6 +105,13 @@ export const updatePost = async (
       reactions: { select: { emoji: true, userId: true } },
     },
   });
+
+  // Agar yangi rasm yuklangan bo'lsa, eskisini S3'dan o'chiramiz
+  if (data.postImage && oldPostImage) {
+    await deleteFromS3(oldPostImage);
+  }
+
+  return updatedPost;
 };
 
 export const deletePost = async (postId: string, userId: string) => {
@@ -133,18 +122,12 @@ export const deletePost = async (postId: string, userId: string) => {
 
   const imagePath = post.postImage;
 
+  // Avval bazadan o'chiramiz
   await prisma.post.delete({ where: { id: postId } });
 
-  // Post o'chirilgandan so'ng uning rasmini ham o'chiramiz
-  if (imagePath && imagePath !== '/public/uploads/posts/defaultpost.png') {
-    try {
-      const fullPath = path.join(process.cwd(), imagePath.substring(1));
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    } catch (err) {
-      console.error(`Failed to delete post image ${imagePath}:`, err);
-    }
+  // Keyin S3'dan o'chiramiz
+  if (imagePath) {
+    await deleteFromS3(imagePath);
   }
 };
 

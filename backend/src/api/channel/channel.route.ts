@@ -7,7 +7,7 @@ import {
   channelIdParamsSchema,
 } from './channel.validation.js';
 import * as channelController from './channel.controller.js';
-import { uploadChannelLogo } from '../../middlewares/uploadChannelLogo.middleware.js';
+import { uploadToS3 } from '../../utils/s3.service.js';
 
 const router = Router();
 
@@ -26,7 +26,7 @@ router.post(
 );
 router.put(
   '/my-channel',
-  uploadChannelLogo.single('logoImage'),
+  uploadToS3.single('logoImage'), // <-- YANGI
   validate(updateChannelSchema),
   channelController.updateMyChannelHandler,
 );

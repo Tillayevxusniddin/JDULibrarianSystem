@@ -16,7 +16,7 @@ import {
 import { updateProfileSchema } from './auth.validation.js';
 import validate from '../../middlewares/validate.middleware.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
-import { uploadAvatar } from '../../middlewares/uploadAvatar.middleware.js';
+import { uploadToS3 } from '../../utils/s3.service.js';
 import passport from '../../config/passport.config.js';
 
 const router = Router();
@@ -191,7 +191,7 @@ router.post(
 router.put(
   '/me/picture',
   authenticate,
-  uploadAvatar.single('profilePicture'), // Middleware'ni shu yerda ishlatamiz
+  uploadToS3.single('profilePicture'),
   updateProfilePictureHandler,
 );
 

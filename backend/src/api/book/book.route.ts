@@ -3,7 +3,8 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import validate from '../../middlewares/validate.middleware.js';
-import { uploadExcel } from '../../middlewares/uploadExcel.middleware.js'; // <-- FAYL YUKLASH MIDDLEWARE'I
+import { uploadExcel } from '../../middlewares/uploadExcel.middleware.js';
+import { uploadToS3 } from '../../utils/s3.service.js';
 import * as bookController from './book.controller.js';
 import {
   createBookSchema,
@@ -44,6 +45,7 @@ router.post(
   '/',
   authenticate,
   authorize(['LIBRARIAN']),
+  uploadToS3.single('coverImage'), // <-- YANGI MIDDLEWARE QO'SHILDI
   validate(createBookSchema),
   bookController.createBookHandler,
 );
@@ -57,9 +59,11 @@ router.put(
   '/:id',
   authenticate,
   authorize(['LIBRARIAN']),
+  uploadToS3.single('coverImage'), // <-- YANGI MIDDLEWARE QO'SHILDI
   validate(updateBookSchema),
   bookController.updateBookHandler,
 );
+
 router.delete(
   '/:id',
   authenticate,
