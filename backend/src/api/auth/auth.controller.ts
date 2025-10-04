@@ -87,23 +87,22 @@ export const changePasswordHandler = asyncHandler(
 
 export const updateProfilePictureHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    if (!req.file) {
-      throw new ApiError(400, 'Rasm yuklanmadi.');
-    }
+    if (!req.file) throw new ApiError(400, 'Rasm yuklanmadi.');
 
-    const userId = req.user!.id;
-    // Fayl yo'lini to'g'ri formatga keltiramiz (masalan: /uploads/avatars/user-123.jpg)
-    const filePath =
-      '/' + req.file.path.replace(/\\/g, '/').replace('public/', '');
+    const file = req.file as any;
+    const fileUrl = file.location; // <-- S3 URL'ni olamiz
+
+    if (!fileUrl) throw new ApiError(500, "Faylni S3'ga yuklashda xatolik.");
 
     const updatedUser = await authService.updateProfilePicture(
-      userId,
-      filePath,
+      req.user!.id,
+      fileUrl,
     );
-
-    res.status(200).json({
-      message: 'Profil rasmi muvaffaqiyatli yangilandi',
-      data: updatedUser,
-    });
+    res
+      .status(200)
+      .json({
+        message: 'Profil rasmi muvaffaqiyatli yangilandi',
+        data: updatedUser,
+      });
   },
 );

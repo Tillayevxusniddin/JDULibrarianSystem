@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import ApiError from '../../utils/ApiError.js';
 import { Profile } from 'passport-google-oauth20';
+import { deleteFromS3 } from '../../utils/s3.service.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -137,37 +138,15 @@ export const changePassword = async (userId: string, input: any) => {
   });
 };
 
-export const updateProfilePicture = async (
-  userId: string,
-  filePath: string,
-) => {
+export const updateProfilePicture = async (userId: string, fileUrl: string) => {
   const userWithOldPicture = await prisma.user.findUnique({
     where: { id: userId },
     select: { profilePicture: true },
   });
 
-  if (userWithOldPicture?.profilePicture) {
-    // --- YECHIM SHU YERDA ---
-    // Bazadagi yo'l '/public/uploads/...' kabi bo'lgani uchun,
-    // boshidagi '/' belgisini olib tashlab, to'g'ri manzilni hosil qilamiz.
-    const oldPath = path.join(
-      process.cwd(),
-      userWithOldPicture.profilePicture.substring(1),
-    );
-    if (fs.existsSync(oldPath)) {
-      try {
-        fs.unlinkSync(oldPath); // Eski faylni o'chiramiz
-      } catch (err) {
-        console.error("Eski rasmni o'chirishda xatolik:", err);
-      }
-    }
-  }
-
   const updatedUser = await prisma.user.update({
     where: { id: userId },
-    data: {
-      profilePicture: filePath,
-    },
+    data: { profilePicture: fileUrl },
     select: {
       id: true,
       email: true,
@@ -179,6 +158,12 @@ export const updateProfilePicture = async (
       createdAt: true,
     },
   });
+
+  // Eski rasmni S3'dan o'chiramiz
+  if (userWithOldPicture?.profilePicture) {
+    await deleteFromS3(userWithOldPicture.profilePicture);
+  }
+
   return updatedUser;
 };
 
