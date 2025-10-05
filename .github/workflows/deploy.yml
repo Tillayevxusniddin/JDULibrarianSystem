@@ -73,7 +73,7 @@ jobs:
         run: |
           rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude '.git' \
           -e "ssh -o StrictHostKeyChecking=no" \
-          ./backend/ ${{ secrets.EC2_USER }}@${{ secrets.EC_HOST }}:~/backend/
+          ./backend/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/backend/
 
       - name: EC2 ichida buyruqlarni bajarish
         uses: appleboy/ssh-action@master
