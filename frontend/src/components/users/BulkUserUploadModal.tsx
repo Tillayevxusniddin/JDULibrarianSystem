@@ -76,9 +76,10 @@ const BulkUserUploadModal: React.FC<BulkUserUploadModalProps> = ({ open, onClose
         </Alert>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {/* Bu yerga shablon faylingizga to'g'ri yo'lni qo'yasiz, masalan /templates/users_template.xlsx */}
-          <Link href={`${import.meta.env.VITE_API_URL.replace('/api/v1', '')}/public/templates/users_template.xlsx`} download>
-              Excel shablonini yuklab olish
+          <Link href="https://library-system-assets.s3.ap-northeast-1.amazonaws.com/templates/users_template.xlsx" download>
+            Excel shablonini yuklab olish
           </Link>
+
         </Typography>
         <Button
           fullWidth

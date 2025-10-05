@@ -54,9 +54,9 @@ jobs:
   # ==================================
   # === BACKEND DEPLOYMENT VAZIFASI ===
   # ==================================
-  deploy-backend:
+    deploy-backend:
     runs-on: ubuntu-latest
-    needs: deploy-frontend # Frontend deploy'i muvaffaqiyatli tugagandan so'ng boshlanadi
+    needs: deploy-frontend
 
     steps:
       - name: Kodni yuklab olish
@@ -67,16 +67,16 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: rsync uchun .env faylini yaratish
+      - name: .env faylini yaratish
         run: echo "${{ secrets.ENV_FILE_PRODUCTION }}" > ./backend/.env
 
-      - name: Fayllarni EC2'ga rsync orqali deploy qilish
+      - name: Fayllarni EC2'ga yuborish
         run: |
           rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude '.git' \
           -e "ssh -o StrictHostKeyChecking=no" \
           ./backend/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/backend/
 
-      - name: EC2'da masofaviy buyruqlarni bajarish
+      - name: EC2 ichida buyruqlarni bajarish
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -84,7 +84,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/backend
-            echo "Backend xizmatlari qayta ishga tushirilmoqda..."
-            sudo docker-compose -f docker-compose.prod.yml up -d --build --force-recreate
-            echo "Eski Docker image'lar tozalanmoqda..."
+            echo "Backend qayta ishga tushmoqda..."
+            sudo docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+            
+            echo "Postgres tayyor bo‘lishini kutmoqda (10 soniya)..."
+            sleep 10
+            
+            echo "Migratsiyalar bajarilmoqda..."
+            sudo docker compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
+            
+            echo "Keraksiz image’lar tozalanmoqda..."
             sudo docker image prune -a -f
+
+    
