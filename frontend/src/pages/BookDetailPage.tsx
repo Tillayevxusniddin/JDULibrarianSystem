@@ -161,7 +161,7 @@ const BookDetailPage: React.FC = () => {
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>;
   if (error || !book) return <Alert severity="error" sx={{ m: 2 }}>{error || 'Kitob topilmadi.'}</Alert>;
   
-  const imageUrl = book.coverImage || `https://via.placeholder.com/...`;
+  const imageUrl = book.coverImage || `https://placeholder.com/400x600?text=${book.title.replace(/\s/g, '+')}`;
 
   return (
     <Box>
