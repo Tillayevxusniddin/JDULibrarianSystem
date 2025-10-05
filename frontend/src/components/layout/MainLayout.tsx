@@ -21,7 +21,7 @@ const MainLayout: React.FC = () => {
 
   const handleDrawerToggle = () => setSidebarOpen(!isSidebarOpen);
 
-  const avatarUrl = user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : undefined;
+  const avatarUrl = user?.profilePicture
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>

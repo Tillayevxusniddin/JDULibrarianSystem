@@ -39,10 +39,7 @@ const ProfileAvatar: React.FC = () => {
   // --- YECHIM SHU YERDA ---
   // Backenddan kelayotgan rasm yo'li '/uploads/...' ko'rinishida bo'lgani uchun,
   // uning oldiga serverdagi statik papka nomini (`/public`) qo'shamiz.
-  const avatarUrl = user?.profilePicture 
-    ? `http://localhost:5000/public${user.profilePicture}` 
-    : undefined;
-  // --- YECHIM TUGADI ---
+  const avatarUrl = user?.profilePicture
 
   return (
     <Box sx={{ position: 'relative', width: 150, height: 150, margin: 'auto' }}>

@@ -19,7 +19,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, allComments, onReply
   const { user } = useAuthStore();
   const isOwnComment = user?.id === comment.user.id;
   const canDelete = isOwnComment || user?.id === channelOwnerId;
-  const avatarUrl = comment.user.profilePicture ? `http://localhost:5000${comment.user.profilePicture}` : undefined;
+  const avatarUrl = comment.user.profilePicture
 
   // Rekursiv funksiya yordamida ota-ona izohni topamiz
   const findCommentById = (comments: PostComment[], id: string): PostComment | null => {

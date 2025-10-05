@@ -25,8 +25,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, channel, onDelete, onEdit, on
   const handleClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-  const logoUrl = channel.logoImage ? `http://localhost:5000/public${channel.logoImage}` : undefined;
-  const postImageUrl = post.postImage ? `http://localhost:5000${post.postImage}` : undefined;
+  const logoUrl = channel.logoImage;
+  const postImageUrl = post.postImage;
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
