@@ -45,3 +45,9 @@ CLAUDE.md
 
 # SSH/SCP 
 ubuntu@*
+
+# Spec Kit / Codex (may contain credentials or local history)
+.codex/
+.specify/
+TODO.md
+docs/
