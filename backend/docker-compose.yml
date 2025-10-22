@@ -29,6 +29,35 @@ services:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: library_api_dev
+    restart: always
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      # NOTE: DB_USER_ENC and DB_PASSWORD_ENC must be URL-encoded versions of DB_USER and DB_PASSWORD.
+      - DATABASE_URL=postgresql://${DB_USER_ENC}:${DB_PASSWORD_ENC}@postgres:5432/${DB_NAME}?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - SES_FROM_EMAIL=${SES_FROM_EMAIL}
+      - REDIS_URL=redis://redis:6379
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - KINTONE_API_BASE_URL=${KINTONE_API_BASE_URL}
+      - KINTONE_API_TOKEN=${KINTONE_API_TOKEN}
+      - KINTONE_APP_ID=${KINTONE_APP_ID}
+
 volumes:
   postgres_data:
   redis_data:
