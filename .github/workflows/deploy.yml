@@ -3,7 +3,7 @@ name: Deploy Library System to AWS
 on:
   push:
     branches:
-      - production # Faqat "production" branch'iga kod qo'shilganda ishga tushadi
+      - main # Faqat "main" branch'iga kod qo'shilganda ishga tushadi
   workflow_dispatch: # GitHub Actions bo'limidan qo'lda ishga tushirishga ruxsat beradi
 
 jobs:
