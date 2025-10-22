@@ -41,7 +41,8 @@ services:
       - postgres
       - redis
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
+      # NOTE: DB_USER_ENC and DB_PASSWORD_ENC must be URL-encoded versions of DB_USER and DB_PASSWORD.
+      - DATABASE_URL=postgresql://${DB_USER_ENC}:${DB_PASSWORD_ENC}@postgres:5432/${DB_NAME}?schema=public
       - JWT_SECRET=${JWT_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
