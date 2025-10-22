@@ -161,7 +161,12 @@ const BookDetailPage: React.FC = () => {
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>;
   if (error || !book) return <Alert severity="error" sx={{ m: 2 }}>{error || 'Kitob topilmadi.'}</Alert>;
   
-  const imageUrl = book.coverImage || `https://placeholder.com/400x600?text=${book.title.replace(/\s/g, '+')}`;
+  // Lightweight SVG placeholder for books without cover images
+  const createPlaceholderSvg = (title: string) => {
+    const encodedTitle = encodeURIComponent(title.substring(0, 30) + (title.length > 30 ? '...' : ''));
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600' viewBox='0 0 400 600'%3E%3Crect fill='%23EBF4FF' width='400' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='24' fill='%237F9CF5' font-weight='bold'%3E%3Ctspan x='50%25' dy='0'%3E${encodedTitle}%3C/tspan%3E%3C/text%3E%3C/svg%3E`;
+  };
+  const imageUrl = book.coverImage || createPlaceholderSvg(book.title);
 
   return (
     <Box>
