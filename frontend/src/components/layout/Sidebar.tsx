@@ -66,7 +66,7 @@ const SidebarContent: React.FC = () => {
 
   const renderNavItems = (items: typeof navItems) => {
     return items.map((item) => (
-      user && item.role.includes(user.role) && (!item.premiumOnly || user.isPremium) && (!item.hideWhenPremium || !user.isPremium) && (
+      user && item.role.includes(user.role) && (!item.hideWhenPremium || !user.isPremium) && (
         <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
           <NavLink to={item.path} style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => setSidebarOpen(false)}>
             {({ isActive }) => (
