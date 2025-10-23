@@ -33,8 +33,8 @@ import { useUiStore } from '../../store/ui.store';
 // Navigatsiya elementlari ro'yxati
 const navItems = [
     { text: 'Asosiy Sahifa', icon: <DashboardIcon />, path: '/', role: ['LIBRARIAN', 'USER'] },
-    { text: 'Mening Kanalim', icon: <RssFeedIcon />, path: '/my-channel', role: ['USER'], premiumOnly: true },
-    { text: 'Kanallar', icon: <DynamicFeedIcon />, path: '/channels', role: ['USER'] },
+    // { text: 'Mening Kanalim', icon: <RssFeedIcon />, path: '/my-channel', role: ['USER'], premiumOnly: true }, // Temporarily disabled
+    // { text: 'Kanallar', icon: <DynamicFeedIcon />, path: '/channels', role: ['USER'] }, // Temporarily disabled
     { text: 'Kitoblar', icon: <BookIcon />, path: '/books', role: ['LIBRARIAN', 'USER'] },
     { text: 'Mening Ijaralarim', icon: <AssignmentIcon />, path: '/my-loans', role: ['USER'] },
     { text: 'Mening Rezervlarim', icon: <BookmarkAddedIcon />, path: '/my-reservations', role: ['USER'] },
@@ -64,7 +64,7 @@ const SidebarContent: React.FC = () => {
 
   const renderNavItems = (items: typeof navItems) => {
     return items.map((item) => (
-      user && item.role.includes(user.role) && (!item.premiumOnly || user.isPremium) && (!item.hideWhenPremium || !user.isPremium) && (
+      user && item.role.includes(user.role) && (!(item as any).premiumOnly || user.isPremium) && (!(item as any).hideWhenPremium || !user.isPremium) && (
         <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
           <NavLink to={item.path} style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => setSidebarOpen(false)}>
             {({ isActive }) => (

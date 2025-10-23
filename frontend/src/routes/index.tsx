@@ -23,11 +23,11 @@ import MyFinesPage from '../pages/MyFinesPage';
 import ManualFinesPage from '../pages/librarian/ManualFinesPage';
 import ManagerPage from '../pages/manager/ManagerPage';
 import PremiumRoute from './PremiumRoute';
-import MyChannelPage from '../pages/MyChannelPage';
+// import MyChannelPage from '../pages/MyChannelPage'; // Temporarily disabled
 import PremiumPage from '../pages/PremiumPage';
-import ChannelViewPage from '../pages/ChannelViewPage';
+// import ChannelViewPage from '../pages/ChannelViewPage'; // Temporarily disabled
 import MySubscriptionsPage from '../pages/MySubscriptionsPage';
-import ChannelsListPage from '../pages/ChannelsListPage';
+// import ChannelsListPage from '../pages/ChannelsListPage'; // Temporarily disabled
 import GoogleCallbackPage from '../pages/GoogleCallbackPage';
 
 
@@ -45,10 +45,10 @@ const router = createBrowserRouter([
     path: '/',
     element: <ProtectedRoute />, // Bu yo'l va uning ichidagilar himoyalangan
     children: [
-      {
-        path: '/channels/:linkName',
-        element: <ChannelViewPage />
-      },
+      // {
+      //   path: '/channels/:linkName',
+      //   element: <ChannelViewPage />
+      // }, // Temporarily disabled
       {
         path: '/posts/:postId',
         element: <PostDetailPage />
@@ -57,7 +57,7 @@ const router = createBrowserRouter([
         path: '/',
         element: <DashboardPage />,
       },
-      { path: '/channels', element: <ChannelsListPage /> },
+      // { path: '/channels', element: <ChannelsListPage /> }, // Temporarily disabled
       {
         path: '/books',
         element: <BooksPage />,
@@ -134,11 +134,11 @@ const router = createBrowserRouter([
       { path: '/my-reservations', element: <MyReservationsPage /> 
 
       },
-      {
-        path: '/my-channel',
-        element: <PremiumRoute />,
-        children: [{ path: '', element: <MyChannelPage /> }],
-      },
+      // {
+      //   path: '/my-channel',
+      //   element: <PremiumRoute />,
+      //   children: [{ path: '', element: <MyChannelPage /> }],
+      // }, // Temporarily disabled
       {
         path: '/profile', // <-- YANGI YO'L
         element: <ProfilePage />,

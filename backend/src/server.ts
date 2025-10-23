@@ -29,7 +29,7 @@ import fineRouter from './api/fine/fine.route.js';
 import userRouter from './api/user/user.route.js';
 import reservationRouter from './api/reservation/reservation.route.js';
 import dashboardRouter from './api/dashboard/dashboard.route.js';
-import channelRouter from './api/channel/channel.route.js';
+// import channelRouter from './api/channel/channel.route.js'; // Temporarily disabled
 import postRouter from './api/post/post.route.js';
 import commentRouter from './api/comment/comment.route.js';
 import reactionRouter from './api/reaction/reaction.route.js';
@@ -68,7 +68,7 @@ app.use('/api/v1/notifications', notificationRouter);
 app.use('/api/v1/fines', fineRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reservations', reservationRouter);
-app.use('/api/v1/channels', channelRouter);
+// app.use('/api/v1/channels', channelRouter); // Temporarily disabled
 app.use('/api/v1/posts', postRouter);
 app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/reactions', reactionRouter);
