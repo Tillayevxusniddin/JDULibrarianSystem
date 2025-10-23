@@ -20,7 +20,7 @@ const BooksPage: React.FC = () => {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ search: '', categoryId: '', availability: '' });
+  const [filters, setFilters] = useState({ search: '', categoryId: '', availability: 'available' });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
