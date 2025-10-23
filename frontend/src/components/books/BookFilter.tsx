@@ -12,7 +12,7 @@ interface BookFilterProps {
 const BookFilter: React.FC<BookFilterProps> = ({ onFilterChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [availability, setAvailability] = useState('');
+  const [availability, setAvailability] = useState('available');
   const [categories, setCategories] = useState<Category[]>([]);
 
   // --- O'ZGARISH: "Bayroqcha" yaratamiz ---
