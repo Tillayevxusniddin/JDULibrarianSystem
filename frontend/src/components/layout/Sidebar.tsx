@@ -33,13 +33,15 @@ import { useUiStore } from '../../store/ui.store';
 // Navigatsiya elementlari ro'yxati
 const navItems = [
     { text: 'Asosiy Sahifa', icon: <DashboardIcon />, path: '/', role: ['LIBRARIAN', 'USER'] },
-    { text: 'Mening Kanalim', icon: <RssFeedIcon />, path: '/my-channel', role: ['USER'], premiumOnly: true },
-    { text: 'Kanallar', icon: <DynamicFeedIcon />, path: '/channels', role: ['USER'] },
+    // COMMENTED OUT - Channels feature not ready for release
+    // { text: 'Mening Kanalim', icon: <RssFeedIcon />, path: '/my-channel', role: ['USER'], premiumOnly: true },
+    // { text: 'Kanallar', icon: <DynamicFeedIcon />, path: '/channels', role: ['USER'] },
     { text: 'Kitoblar', icon: <BookIcon />, path: '/books', role: ['LIBRARIAN', 'USER'] },
     { text: 'Mening Ijaralarim', icon: <AssignmentIcon />, path: '/my-loans', role: ['USER'] },
     { text: 'Mening Rezervlarim', icon: <BookmarkAddedIcon />, path: '/my-reservations', role: ['USER'] },
     { text: 'Bildirishnomalar', icon: <NotificationsIcon />, path: '/notifications', role: ['LIBRARIAN', 'USER'] },
-    { text: 'Mening Obunalarim', icon: <SubscriptionsIcon />, path: '/my-subscriptions', role: ['USER'] },
+    // COMMENTED OUT - Channels feature not ready for release
+    // { text: 'Mening Obunalarim', icon: <SubscriptionsIcon />, path: '/my-subscriptions', role: ['USER'] },
     { text: 'Kitob Taklif Qilish', icon: <AddCommentIcon />, path: '/suggest-book', role: ['USER'] },
     { text: 'Mening Jarimalarim', icon: <MonetizationOnIcon />, path: '/my-fines', role: ['USER'] },
     { text: 'Premium Olish', icon: <WorkspacePremiumIcon />, path: '/get-premium', role: ['USER'], hideWhenPremium: true },

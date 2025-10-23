@@ -25,9 +25,9 @@ import ManagerPage from '../pages/manager/ManagerPage';
 import PremiumRoute from './PremiumRoute';
 import MyChannelPage from '../pages/MyChannelPage';
 import PremiumPage from '../pages/PremiumPage';
-import ChannelViewPage from '../pages/ChannelViewPage';
+// import ChannelViewPage from '../pages/ChannelViewPage';
 import MySubscriptionsPage from '../pages/MySubscriptionsPage';
-import ChannelsListPage from '../pages/ChannelsListPage';
+// import ChannelsListPage from '../pages/ChannelsListPage';
 import GoogleCallbackPage from '../pages/GoogleCallbackPage';
 
 
@@ -45,10 +45,11 @@ const router = createBrowserRouter([
     path: '/',
     element: <ProtectedRoute />, // Bu yo'l va uning ichidagilar himoyalangan
     children: [
-      {
-        path: '/channels/:linkName',
-        element: <ChannelViewPage />
-      },
+      // COMMENTED OUT - Channels feature not ready for release
+      // {
+      //   path: '/channels/:linkName',
+      //   element: <ChannelViewPage />
+      // },
       {
         path: '/posts/:postId',
         element: <PostDetailPage />
@@ -57,7 +58,8 @@ const router = createBrowserRouter([
         path: '/',
         element: <DashboardPage />,
       },
-      { path: '/channels', element: <ChannelsListPage /> },
+      // COMMENTED OUT - Channels feature not ready for release
+      // { path: '/channels', element: <ChannelsListPage /> },
       {
         path: '/books',
         element: <BooksPage />,
@@ -121,10 +123,11 @@ const router = createBrowserRouter([
         path: '/get-premium',
         element: <PremiumPage />,
       },
-      {
-        path: '/my-subscriptions',
-        element: <MySubscriptionsPage />,
-      },
+      // COMMENTED OUT - Channels feature not ready for release
+      // {
+      //   path: '/my-subscriptions',
+      //   element: <MySubscriptionsPage />,
+      // },
       {
         path: '/manager-panel',
         // Bu yerga keyinroq ManagerRoute qo'yamiz, hozircha LibrarianRoute ishlatib turamiz
@@ -134,11 +137,12 @@ const router = createBrowserRouter([
       { path: '/my-reservations', element: <MyReservationsPage /> 
 
       },
-      {
-        path: '/my-channel',
-        element: <PremiumRoute />,
-        children: [{ path: '', element: <MyChannelPage /> }],
-      },
+      // COMMENTED OUT - Channels feature not ready for release
+      // {
+      //   path: '/my-channel',
+      //   element: <PremiumRoute />,
+      //   children: [{ path: '', element: <MyChannelPage /> }],
+      // },
       {
         path: '/profile', // <-- YANGI YO'L
         element: <ProfilePage />,
