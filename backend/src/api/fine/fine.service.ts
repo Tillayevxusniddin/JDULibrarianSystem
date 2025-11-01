@@ -140,6 +140,9 @@ export const updateFineAmount = async (fineId: string, amount: number) => {
   if (!fine) {
     throw new ApiError(404, 'Jarima topilmadi.');
   }
+  if (fine.isPaid) {
+    throw new ApiError(400, "To'langan jarimani o'zgartirish mumkin emas.");
+  }
   return prisma.fine.update({
     where: { id: fineId },
     data: { amount },

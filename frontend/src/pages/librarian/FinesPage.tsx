@@ -53,12 +53,22 @@ const FinesPage: React.FC = () => {
     try {
       // Remove spaces and validate the expression contains only numbers, +, -, *, /, (, )
       const cleanExpression = expression.replace(/\s/g, '');
+      
+      // Strict validation: only allow digits and basic math operators
       if (!/^[\d+\-*/().]+$/.test(cleanExpression)) {
         return null;
       }
-      // Evaluate the expression safely
+      
+      // Additional safety: prevent empty expressions or expressions with only operators
+      if (!cleanExpression || /^[+\-*/().]+$/.test(cleanExpression)) {
+        return null;
+      }
+      
+      // Evaluate the expression safely within a restricted context
       const result = Function(`'use strict'; return (${cleanExpression})`)();
-      return typeof result === 'number' && !isNaN(result) ? Math.max(0, Math.round(result)) : null;
+      return typeof result === 'number' && !isNaN(result) && isFinite(result) 
+        ? Math.max(0, Math.round(result)) 
+        : null;
     } catch {
       return null;
     }
@@ -93,7 +103,7 @@ const FinesPage: React.FC = () => {
     const newAmount = evaluateExpression(editValue);
     
     if (newAmount === null) {
-      toast.error('Noto\'g\'ri ifoda. Faqat raqamlar va matematik amallar (+, -, *, /) ishlatilishi mumkin.');
+      toast.error("Noto'g'ri ifoda. Faqat raqamlar va matematik amallar (+, -, *, /) ishlatilishi mumkin.");
       return;
     }
 
