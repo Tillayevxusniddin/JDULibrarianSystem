@@ -1,6 +1,6 @@
 // src/pages/librarian/FinesPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Tabs, Tab } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Tabs, Tab, TextField } from '@mui/material';
 import { responsiveTableSx } from '../../components/common/tableResponsive';
 import api from '../../api';
 import type { Fine } from '../../types';
@@ -12,6 +12,8 @@ const FinesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'unpaid' | 'paid' | 'all'>('unpaid');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
 
   const fetchFines = useCallback(async () => {
     try {
@@ -43,6 +45,66 @@ const FinesPage: React.FC = () => {
       fetchFines();
     } catch (error: any) {
       const message = error.response?.data?.message || "Jarimani to'langan deb belgilashda xatolik yuz berdi.";
+      toast.error(message);
+    }
+  };
+
+  const evaluateExpression = (expression: string): number | null => {
+    try {
+      // Remove spaces and validate the expression contains only numbers, +, -, *, /, (, )
+      const cleanExpression = expression.replace(/\s/g, '');
+      if (!/^[\d+\-*/().]+$/.test(cleanExpression)) {
+        return null;
+      }
+      // Evaluate the expression safely
+      const result = Function(`'use strict'; return (${cleanExpression})`)();
+      return typeof result === 'number' && !isNaN(result) ? Math.max(0, Math.round(result)) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleAmountClick = (fine: Fine) => {
+    setEditingId(fine.id);
+    setEditValue(fine.amount.toString());
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditValue(e.target.value);
+  };
+
+  const handleAmountKeyDown = async (e: React.KeyboardEvent, fineId: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      await handleAmountUpdate(fineId);
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
+      setEditValue('');
+    }
+  };
+
+  const handleAmountUpdate = async (fineId: string) => {
+    if (!editValue.trim()) {
+      setEditingId(null);
+      setEditValue('');
+      return;
+    }
+
+    const newAmount = evaluateExpression(editValue);
+    
+    if (newAmount === null) {
+      toast.error('Noto\'g\'ri ifoda. Faqat raqamlar va matematik amallar (+, -, *, /) ishlatilishi mumkin.');
+      return;
+    }
+
+    try {
+      await api.patch(`/fines/${fineId}/amount`, { amount: newAmount });
+      toast.success('Jarima miqdori muvaffaqiyatli yangilandi!');
+      setEditingId(null);
+      setEditValue('');
+      fetchFines();
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Jarima miqdorini yangilashda xatolik yuz berdi.';
       toast.error(message);
     }
   };
@@ -80,7 +142,32 @@ const FinesPage: React.FC = () => {
                 <TableRow key={fine.id} hover>
                   <TableCell data-label="Foydalanuvchi">{fine.user.firstName} {fine.user.lastName}</TableCell>
                   <TableCell data-label="Sababi">{fine.reason}</TableCell>
-                  <TableCell data-label="Miqdori">{fine.amount.toLocaleString()} so'm</TableCell>
+                  <TableCell 
+                    data-label="Miqdori" 
+                    onClick={() => !fine.isPaid && handleAmountClick(fine)}
+                    sx={{ 
+                      cursor: fine.isPaid ? 'default' : 'pointer',
+                      '&:hover': fine.isPaid ? {} : { backgroundColor: 'action.hover' }
+                    }}
+                  >
+                    {editingId === fine.id ? (
+                      <TextField
+                        value={editValue}
+                        onChange={handleAmountChange}
+                        onKeyDown={(e) => handleAmountKeyDown(e, fine.id)}
+                        onBlur={() => {
+                          setEditingId(null);
+                          setEditValue('');
+                        }}
+                        size="small"
+                        autoFocus
+                        placeholder="Masalan: 12000-4000"
+                        sx={{ width: '180px' }}
+                      />
+                    ) : (
+                      `${fine.amount.toLocaleString()} so'm`
+                    )}
+                  </TableCell>
                   <TableCell data-label="Sana">{new Date(fine.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell data-label="Statusi">
                     <Chip label={fine.isPaid ? "To'langan" : "To'lanmagan"} color={fine.isPaid ? 'success' : 'error'} size="small" />
