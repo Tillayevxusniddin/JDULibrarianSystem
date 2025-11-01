@@ -51,11 +51,11 @@ const FinesPage: React.FC = () => {
 
   const evaluateExpression = (expression: string): number | null => {
     try {
-      // Remove spaces and validate the expression contains only numbers, +, -, *, /, (, )
+      // Remove all spaces
       const cleanExpression = expression.replace(/\s/g, '');
       
-      // Strict validation: only allow digits and basic math operators
-      if (!/^[\d+\-*/().]+$/.test(cleanExpression)) {
+      // Strict validation: only allow digits, decimal points, and basic math operators
+      if (!/^[\d.+\-*/()]+$/.test(cleanExpression)) {
         return null;
       }
       
@@ -64,8 +64,15 @@ const FinesPage: React.FC = () => {
         return null;
       }
       
-      // Evaluate the expression safely within a restricted context
+      // Prevent malicious patterns
+      if (cleanExpression.includes('..') || /[+\-*/]{3,}/.test(cleanExpression)) {
+        return null;
+      }
+      
+      // Use eval with strict mode in a controlled context
+      // The regex above ensures only safe mathematical operations are allowed
       const result = Function(`'use strict'; return (${cleanExpression})`)();
+      
       return typeof result === 'number' && !isNaN(result) && isFinite(result) 
         ? Math.max(0, Math.round(result)) 
         : null;
