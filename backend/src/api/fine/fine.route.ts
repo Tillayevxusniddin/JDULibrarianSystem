@@ -6,6 +6,7 @@ import {
   getAllFinesSchema,
   markFineAsPaidSchema,
   createManualFineSchema,
+  updateFineAmountSchema,
 } from './fine.validation.js';
 
 const router = Router();
@@ -110,6 +111,43 @@ router.post(
   authorize(['LIBRARIAN']),
   validate(createManualFineSchema),
   fineController.createManualFineHandler,
+);
+
+/**
+ * @openapi
+ * /api/v1/fines/{id}/amount:
+ *   patch:
+ *     summary: Jarima miqdorini yangilash (Faqat kutubxonachi)
+ *     tags:
+ *       - Fines
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/fineId'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               amount:
+ *                 type: number
+ *                 minimum: 0
+ *     responses:
+ *       '200':
+ *         description: Jarima miqdori muvaffaqiyatli yangilandi
+ *       '403':
+ *         description: Ruxsat yo'q
+ *       '404':
+ *         description: Jarima topilmadi
+ */
+router.patch(
+  '/:id/amount',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  validate(updateFineAmountSchema),
+  fineController.updateFineAmountHandler,
 );
 
 export default router;
