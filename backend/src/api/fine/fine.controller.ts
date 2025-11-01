@@ -37,3 +37,15 @@ export const createManualFineHandler = asyncHandler(
     });
   },
 );
+
+export const updateFineAmountHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.validatedData!.params;
+    const { amount } = req.validatedData!.body;
+    const updatedFine = await fineService.updateFineAmount(id, amount);
+    res.status(200).json({
+      message: 'Jarima miqdori muvaffaqiyatli yangilandi.',
+      data: updatedFine,
+    });
+  },
+);

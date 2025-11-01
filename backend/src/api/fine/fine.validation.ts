@@ -33,3 +33,13 @@ export const createManualFineSchema = z.object({
       .min(10, "Sabab kamida 10 ta belgidan iborat bo'lishi kerak"),
   }),
 });
+
+export const updateFineAmountSchema = z.object({
+  params: z.object({
+    id: z.string().uuid({ message: 'Fine ID must be a valid UUID' }),
+  }),
+  body: z.object({
+    amount: z.coerce.number().min(0, 'Amount must be greater than or equal to 0'),
+  }),
+  query: emptySchema,
+});
