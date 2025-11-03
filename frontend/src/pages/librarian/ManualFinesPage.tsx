@@ -22,6 +22,12 @@ const ManualFinesPage: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [booksLoading, setBooksLoading] = useState(false);
   
+  // Barcode uchun state'lar
+  const [barcodeSearch, setBarcodeSearch] = useState('');
+  const [debouncedBarcodeSearch] = useDebounce(barcodeSearch, 500);
+  const [barcodeOptions, setBarcodeOptions] = useState<Array<{ barcode: string; bookTitle: string; bookId: string }>>([]);
+  const [barcodesLoading, setBarcodesLoading] = useState(false);
+  
   // Forma uchun state'lar
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
@@ -68,6 +74,60 @@ const ManualFinesPage: React.FC = () => {
       .finally(() => setBooksLoading(false));
   }, [debouncedBookSearch]);
 
+  // Barcode'larni qidirish - barcha mavjud barcode'larni yuklash
+  useEffect(() => {
+    const fetchBarcodes = async () => {
+      setBarcodesLoading(true);
+      try {
+        // Birinchi 50 ta kitobni olish (barcha nusxalar bilan)
+        const response = await api.get<PaginatedResponse<Book>>('/books', {
+          params: { 
+            search: debouncedBarcodeSearch || undefined,
+            limit: 50 
+          },
+        });
+        
+        // Har bir kitob uchun to'liq ma'lumotlarni olish (nusxalar bilan)
+        const booksWithCopies = await Promise.all(
+          response.data.data.map(async (book) => {
+            try {
+              const detailResponse = await api.get<Book>(`/books/${book.id}`);
+              return detailResponse.data;
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        // Barcha barcode'larni tekis ro'yxatga olish
+        const allBarcodes: Array<{ barcode: string; bookTitle: string; bookId: string }> = [];
+        booksWithCopies.forEach(book => {
+          if (book && book.copies) {
+            book.copies.forEach(copy => {
+              // Agar barcode qidirish bo'lsa, faqat mos keladiganlarini qo'shish
+              if (!debouncedBarcodeSearch || 
+                  copy.barcode.toLowerCase().includes(debouncedBarcodeSearch.toLowerCase())) {
+                allBarcodes.push({
+                  barcode: copy.barcode,
+                  bookTitle: book.title,
+                  bookId: book.id
+                });
+              }
+            });
+          }
+        });
+
+        setBarcodeOptions(allBarcodes);
+      } catch (error) {
+        toast.error('Barcode\'larni yuklashda xatolik yuz berdi.');
+      } finally {
+        setBarcodesLoading(false);
+      }
+    };
+
+    fetchBarcodes();
+  }, [debouncedBarcodeSearch]);
+
   const handleSubmit = async () => {
     if (!selectedUser || !selectedBarcode || !amount || !reason) {
       toast.error('Barcha maydonlarni to`ldiring!');
@@ -89,6 +149,7 @@ const ManualFinesPage: React.FC = () => {
         setAmount('');
         setReason('');
         setBookSearch('');
+        setBarcodeSearch('');
     } catch (error: any) {
       const message = error.response?.data?.message || "Jarima yaratishda xatolik yuz berdi.";
       toast.error(message);
@@ -139,37 +200,24 @@ const ManualFinesPage: React.FC = () => {
               2. Jarima ma'lumotlarini kiriting {selectedUser && `uchun: ${selectedUser.firstName}`}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, opacity: selectedUser ? 1 : 0.5, transition: 'opacity 0.3s' }}>
-              {/* Kitobni tanlash */}
+              {/* Kitobni tanlash (ixtiyoriy) */}
               <Autocomplete
                 disabled={!selectedUser}
                 options={bookOptions}
                 getOptionLabel={(option) => option.title}
                 loading={booksLoading}
                 value={selectedBook}
-                onChange={async (_, newValue) => {
-                  if (newValue) {
-                    // Kitob tanlanganda, uning to'liq ma'lumotlarini (nusxalar bilan) yuklash
-                    try {
-                      const response = await api.get<Book>(`/books/${newValue.id}`);
-                      setSelectedBook(response.data);
-                    } catch (error) {
-                      toast.error('Kitob ma\'lumotlarini yuklashda xatolik yuz berdi.');
-                      setSelectedBook(newValue);
-                    }
-                  } else {
-                    setSelectedBook(null);
-                  }
-                  setSelectedBarcode(null); // Reset barcode when book changes
+                onChange={(_, newValue) => {
+                  setSelectedBook(newValue);
                 }}
                 onInputChange={(_, newInputValue) => setBookSearch(newInputValue)}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Kitobni tanlang"
+                    label="Kitobni tanlang (ixtiyoriy)"
                     placeholder="Kitob nomini qidiring..."
                     variant="outlined"
-                    required
                     InputProps={{
                       ...params.InputProps,
                       endAdornment: (
@@ -182,40 +230,59 @@ const ManualFinesPage: React.FC = () => {
                   />
                 )}
               />
-              {/* Barcode tanlash (kitob tanlanganidan keyin) */}
-              {selectedBook && (
-                <Autocomplete
-                  disabled={!selectedUser || !selectedBook}
-                  autoHighlight
-                  fullWidth
-                  options={(selectedBook.copies || [])
-                    .map((c) => c.barcode)}
-                  value={selectedBarcode}
-                  onChange={(_, newValue) => setSelectedBarcode(newValue)}
-                  getOptionLabel={(option) => option}
-                  isOptionEqualToValue={(option, value) => option === value}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="body1">{option}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Shtrix-kod
-                        </Typography>
-                      </Box>
-                    </li>
-                  )}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Kitob nusxasining shtrix-kodi"
-                      placeholder="Shtrix-kodni qidiring..."
-                      variant="outlined"
-                      required
-                      helperText={selectedBook.copies?.length ? `${selectedBook.copies.length} ta nusxa mavjud` : 'Nusxalar topilmadi'}
-                    />
-                  )}
-                />
-              )}
+              {/* Barcode tanlash (mustaqil) */}
+              <Autocomplete
+                disabled={!selectedUser}
+                autoHighlight
+                fullWidth
+                options={barcodeOptions}
+                getOptionLabel={(option) => option.barcode}
+                loading={barcodesLoading}
+                value={barcodeOptions.find(opt => opt.barcode === selectedBarcode) || null}
+                onChange={(_, newValue) => {
+                  setSelectedBarcode(newValue?.barcode || null);
+                  // Agar barcode tanlansa va kitob tanlanmagan bo'lsa, kitobni avtomatik tanlash
+                  if (newValue && !selectedBook) {
+                    const matchingBook = bookOptions.find(b => b.id === newValue.bookId);
+                    if (matchingBook) {
+                      setSelectedBook(matchingBook);
+                    }
+                  }
+                }}
+                onInputChange={(_, newInputValue) => setBarcodeSearch(newInputValue)}
+                isOptionEqualToValue={(option, value) => option.barcode === value.barcode}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.barcode}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {option.barcode}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.bookTitle}
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Kitob nusxasining shtrix-kodi"
+                    placeholder="Shtrix-kodni qidiring..."
+                    variant="outlined"
+                    required
+                    helperText={`${barcodeOptions.length} ta nusxa mavjud`}
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {barcodesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
               <TextField 
                 disabled={!selectedUser}
                 label="Jarima miqdori (so'mda)" 
