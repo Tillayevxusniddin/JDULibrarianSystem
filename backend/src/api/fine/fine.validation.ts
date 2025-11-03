@@ -30,7 +30,7 @@ export const createManualFineSchema = z.object({
     amount: z.coerce.number().min(0),
     reason: z
       .string()
-      .min(10, "Sabab kamida 10 ta belgidan iborat bo'lishi kerak"),
+      .min(3, "Sabab kamida 3 ta belgidan iborat bo'lishi kerak"),
   }),
 });
 
