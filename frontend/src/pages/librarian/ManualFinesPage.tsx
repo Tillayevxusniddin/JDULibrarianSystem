@@ -181,6 +181,8 @@ const ManualFinesPage: React.FC = () => {
                     .map((c) => c.barcode)}
                   value={selectedBarcode}
                   onChange={(_, newValue) => setSelectedBarcode(newValue)}
+                  getOptionLabel={(option) => option}
+                  isOptionEqualToValue={(option, value) => option === value}
                   renderInput={(params) => (
                     <TextField
                       {...params}
