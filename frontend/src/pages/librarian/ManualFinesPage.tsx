@@ -53,15 +53,15 @@ const ManualFinesPage: React.FC = () => {
     setUserPage(1);
   }, [debouncedUserSearch]);
 
-  // Kitoblarni qidirish
+  // Kitoblarni qidirish - boshlang'ich kitoblarni ham yuklash
   useEffect(() => {
-    if (debouncedBookSearch.length < 2) {
-      setBookOptions([]);
-      return;
-    }
+    // Qidiruv bo'lmasa, boshlang'ich 10 ta kitobni yuklash
     setBooksLoading(true);
     api.get<PaginatedResponse<Book>>('/books', {
-      params: { search: debouncedBookSearch, limit: 10 },
+      params: { 
+        search: debouncedBookSearch || undefined, 
+        limit: 10 
+      },
     })
       .then(response => setBookOptions(response.data.data))
       .catch(() => toast.error('Kitoblarni yuklashda xatolik yuz berdi.'))
@@ -146,8 +146,19 @@ const ManualFinesPage: React.FC = () => {
                 getOptionLabel={(option) => option.title}
                 loading={booksLoading}
                 value={selectedBook}
-                onChange={(_, newValue) => {
-                  setSelectedBook(newValue);
+                onChange={async (_, newValue) => {
+                  if (newValue) {
+                    // Kitob tanlanganda, uning to'liq ma'lumotlarini (nusxalar bilan) yuklash
+                    try {
+                      const response = await api.get<Book>(`/books/${newValue.id}`);
+                      setSelectedBook(response.data);
+                    } catch (error) {
+                      toast.error('Kitob ma\'lumotlarini yuklashda xatolik yuz berdi.');
+                      setSelectedBook(newValue);
+                    }
+                  } else {
+                    setSelectedBook(null);
+                  }
                   setSelectedBarcode(null); // Reset barcode when book changes
                 }}
                 onInputChange={(_, newInputValue) => setBookSearch(newInputValue)}
@@ -183,13 +194,24 @@ const ManualFinesPage: React.FC = () => {
                   onChange={(_, newValue) => setSelectedBarcode(newValue)}
                   getOptionLabel={(option) => option}
                   isOptionEqualToValue={(option, value) => option === value}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="body1">{option}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Shtrix-kod
+                        </Typography>
+                      </Box>
+                    </li>
+                  )}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label="Kitob nusxasining shtrix-kodi"
-                      placeholder="Shtrix-kodni tanlang..."
+                      placeholder="Shtrix-kodni qidiring..."
                       variant="outlined"
                       required
+                      helperText={selectedBook.copies?.length ? `${selectedBook.copies.length} ta nusxa mavjud` : 'Nusxalar topilmadi'}
                     />
                   )}
                 />
