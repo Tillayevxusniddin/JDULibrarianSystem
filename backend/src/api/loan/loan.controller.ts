@@ -3,11 +3,30 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import * as loanService from './loan.service.js';
+import prisma from '../../config/db.config.js';
 
 export const createLoanHandler = asyncHandler(
   async (req: Request, res: Response) => {
     // --- O'ZGARISH: bookId -> barcode ---
     const { barcode, userId } = req.validatedData!.body;
+
+    // 1) Check unpaid fines for the user via Prisma aggregate (faster + precise)
+    const agg = await prisma.fine.aggregate({
+      where: { userId, isPaid: false },
+      _sum: { amount: true },
+      _count: { _all: true },
+    });
+    const hasUnpaid = (agg._count?._all ?? 0) > 0;
+    const totalAmount = Number(agg._sum?.amount ?? 0);
+    if (hasUnpaid && totalAmount > 0) {
+      res.status(400).json({
+        error: true,
+        message: `Foydalanuvchida ${totalAmount} miqdorda to'lanmagan qarz mavjud`,
+      });
+      return;
+    }
+
+    // 2) Continue normal loan creation
     const loan = await loanService.createLoan(barcode, userId);
     res.status(201).json(loan);
   },
