@@ -35,6 +35,21 @@ export const createLoan = async (barcode: string, userId: string) => {
       throw new ApiError(400, "Muddati o'tgan kitobingiz bor. Uni qaytaring.");
     }
 
+    // Foydalanuvchining to'lanmagan jarimalari borligini tekshirish
+    const unpaidFines = await tx.fine.findMany({
+      where: { userId, isPaid: false },
+    });
+    if (unpaidFines.length > 0) {
+      const totalUnpaid = unpaidFines.reduce(
+        (sum, fine) => sum + Number(fine.amount),
+        0,
+      );
+      throw new ApiError(
+        400,
+        `Foydalanuvchida ${totalUnpaid} miqdorda to'lanmagan qarz mavjud`,
+      );
+    }
+
     // 2. Shtrix-kod bo'yicha kitobning jismoniy nusxasini topamiz
     const bookCopy = await tx.bookCopy.findUnique({ where: { barcode } });
     if (!bookCopy) {
