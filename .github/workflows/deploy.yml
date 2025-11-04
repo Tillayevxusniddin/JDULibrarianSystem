@@ -63,6 +63,8 @@ jobs:
         run: npm ci
 
       - name: Qurish
+        env:
+          VITE_API_URL: https://api.library.manabi.uz/api/v1
         run: npm run build
 
       - name: AWS hisob ma'lumotlarini sozlash
