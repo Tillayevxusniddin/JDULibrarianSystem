@@ -113,6 +113,6 @@ jobs:
           script: |
             cd ~/backend
             echo "Backend xizmatlari qayta ishga tushirilmoqda..."
-            sudo docker-compose -f docker-compose.prod.yml up -d --build --force-recreate
+            sudo docker compose -f docker-compose.prod.yml up -d --build --force-recreate
             echo "Eski Docker image'lar tozalanmoqda..."
             sudo docker image prune -a -f
