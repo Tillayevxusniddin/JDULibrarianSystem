@@ -1,40 +1,96 @@
-🚨 EMERGENCY: STOP IGNORING BRANCH NAME REQUIREMENTS 🚨
+# Commit Message Guidelines
 
-⚠️ WARNING: YOU KEEP USING WRONG BRANCH NAMES! ⚠️
+Follow these conventions for clear, consistent commit messages that align with the project's development workflow.
 
-STEP 1: MANDATORY - Check the actual current git branch name in the terminal prompt or status
-STEP 2: Use EXACT format below - NO SUBSTITUTIONS ALLOWED
-
-🔴 CRITICAL ENFORCEMENT RULES:
-
-1. **ABSOLUTELY FORBIDDEN**: Using "feature/docs", "feature/update-guidelines", or ANY other branch name
-2. **REQUIRED**: Use actual current branch name
-3. **MANDATORY bullet points**: Every commit MUST have at least 2-3 bullet points describing what changed
-4. **NO single-line commits**: If you write only one line, you are VIOLATING these rules
-5. **Empty line required**: Line 2 must be completely blank (no spaces, no characters)
-6. **Lowercase summary**: Everything after the colon and space must be lowercase
-
-❌ WRONG EXAMPLES (DO NOT DO THIS):
+## Format
 
 ```
-feature/docs: Add comprehensive guidelines for AI coding assistant and project structure
+<type>: <short summary in lowercase>
+
+- <detailed change 1>
+- <detailed change 2>
+- <detailed change 3>
 ```
 
-^ This is WRONG because:
+## Rules
 
-- No bullet points (violates rule #3)
-- Might be wrong branch name (violates rule #1)
-- No empty line after summary
+1. **Summary line (line 1)**:
+   - Start with a type prefix: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `style:`
+   - Keep it concise and lowercase after the colon
+   - Example: `feat: add book reservation filtering`
 
-✅ CORRECT EXAMPLE:
+2. **Empty line (line 2)**:
+   - MUST be completely blank (no spaces, no characters)
+
+3. **Bullet points (line 3+)**:
+   - **MANDATORY**: Include at least 2-3 bullet points describing specific changes
+   - Start each with `- ` (dash and space)
+   - Be specific about what changed, added, or fixed
+   - Example:
+     ```
+     - Added filter dropdown for reservation status
+     - Updated ReservationService to support status filtering
+     - Added tests for new filtering functionality
+     ```
+
+## Commit Types
+
+- `feat:` - New feature or functionality
+- `fix:` - Bug fix
+- `chore:` - Maintenance tasks, dependency updates
+- `docs:` - Documentation changes
+- `refactor:` - Code restructuring without behavior change
+- `test:` - Adding or updating tests
+- `style:` - Code formatting, styling changes
+
+## ✅ Good Examples
 
 ```
-actual-branch-name: update wbgt component styling
+feat: add overdue loan notification system
 
-- Fixed temperature display alignment in MetricDisplay component
-- Updated CSS grid responsive breakpoints for mobile devices
-- Added error handling for null temperature values
-- Improved accessibility with better color contrast ratios
+- Created NotificationJob to check for overdue loans daily
+- Added email templates for overdue notifications
+- Updated LoanService with overdue detection logic
+- Added tests for notification scheduling
 ```
 
-🔥 FINAL WARNING: If you generate a commit message without bullet points or with the wrong branch name, you are COMPLETELY IGNORING these instructions!
+```
+fix: resolve book search pagination issue
+
+- Fixed off-by-one error in search pagination
+- Updated BookController to handle edge cases
+- Added validation for page and limit parameters
+```
+
+```
+chore: upgrade express to version 5.1.0
+
+- Updated package.json with Express 5.1.0
+- Migrated deprecated middleware syntax
+- Updated route handler types
+- Verified all tests pass with new version
+```
+
+## ❌ Bad Examples
+
+```
+feature/books: Add search feature
+```
+^ Wrong: Single line without bullet points, doesn't follow format
+
+```
+update stuff
+```
+^ Wrong: Too vague, no type prefix, no details
+
+```
+fix: bug in the system
+```
+^ Wrong: Not specific, no bullet points explaining what was fixed
+
+## Notes
+
+- Be descriptive but concise
+- Focus on *what* changed and *why* if not obvious
+- Reference issue numbers if applicable: `- Fixes #123`
+- Keep commits focused on a single logical change
