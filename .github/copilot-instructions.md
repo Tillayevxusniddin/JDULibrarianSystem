@@ -29,30 +29,30 @@ This is a full-stack library management system built with React + Vite frontend 
 ## 🔧 Development Tools & Commands
 
 ### Package Management
-- **Use npm** (NOT Bun, NOT yarn) - the project uses `package-lock.json` for consistency and reproducible builds
-- Install dependencies: `npm install`
-- Frontend: `cd frontend && npm install`
-- Backend: `cd backend && npm install`
+- **Use bun** (NOT npm, NOT yarn) - the project uses bun for fast, efficient package management
+- Install dependencies: `bun install`
+- Frontend: `cd frontend && bun install`
+- Backend: `cd backend && bun install`
 
 ### Backend Commands
-- Development: `npm run dev` (runs on port 5000)
-- Build: `npm run build`
-- Production: `npm start`
-- Tests: `npm test` (Jest + Supertest)
-- Database seed: `npm run db:seed`
-- Prisma migrations: `npx prisma migrate dev`
+- Development: `bun run dev` (runs on port 5000)
+- Build: `bun run build`
+- Production: `bun start`
+- Tests: `bun test` (Jest + Supertest)
+- Database seed: `bun run db:seed`
+- Prisma migrations: `bunx prisma migrate dev`
 
 ### Frontend Commands
-- Development: `npm run dev` (runs on port 5173)
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Preview: `npm run preview`
+- Development: `bun run dev` (runs on port 5173)
+- Build: `bun run build`
+- Lint: `bun run lint`
+- Preview: `bun run preview`
 
 ### Database Operations
 - Use Prisma Client for database queries (NOT raw psql)
-- Migrations: `npx prisma migrate dev`
-- Seed: `npm run db:seed` (from backend directory)
-- Reset: `npm run db:reset` (from backend directory)
+- Migrations: `bunx prisma migrate dev`
+- Seed: `bun run db:seed` (from backend directory)
+- Reset: `bun run db:reset` (from backend directory)
 
 ## 📝 Code Standards
 
@@ -94,7 +94,7 @@ This is a full-stack library management system built with React + Vite frontend 
 ### Testing
 - Backend tests use Jest + Supertest
 - Test files in `backend/src/api/__tests__/`
-- Run tests with `npm test` from backend directory
+- Run tests with `bun test` from backend directory
 - Use test database (`.env.test` configuration)
 
 ### Environment Variables
