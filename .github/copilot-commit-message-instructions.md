@@ -76,7 +76,7 @@ chore: upgrade express to version 5.1.0
 ```
 feature/books: Add search feature
 ```
-^ Wrong: Single line without bullet points, doesn't follow format
+^ Wrong: Using branch name as prefix (should use commit type like `feat:`), single line without bullet points
 
 ```
 update stuff

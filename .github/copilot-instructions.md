@@ -29,7 +29,7 @@ This is a full-stack library management system built with React + Vite frontend 
 ## 🔧 Development Tools & Commands
 
 ### Package Management
-- **Use npm** (NOT Bun, NOT yarn) - the project uses `package-lock.json`
+- **Use npm** (NOT Bun, NOT yarn) - the project uses `package-lock.json` for consistency and reproducible builds
 - Install dependencies: `npm install`
 - Frontend: `cd frontend && npm install`
 - Backend: `cd backend && npm install`
@@ -74,6 +74,8 @@ This is a full-stack library management system built with React + Vite frontend 
 - ✅ Write clear, readable, type-safe code
 - ✅ Remove debug console.logs before committing
 - ✅ Use Zod for validation (both frontend and backend use Zod)
+  - Backend: Check existing `*.validation.ts` files for patterns
+  - Frontend: Use with React Hook Form via `@hookform/resolvers`
 
 ## ⚡ Development Workflow
 
