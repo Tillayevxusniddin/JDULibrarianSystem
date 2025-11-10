@@ -209,7 +209,7 @@ model BookCopy {
   book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   // Bog'lanishlar
-  loan Loan? // Bu nusxa faqat bitta aktiv ijarada bo'lishi mumkin
+  loans Loan[] // Bir nusxaning bir necha ijara tarixi bo'lishi mumkin
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -229,7 +229,7 @@ model Loan {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  bookCopyId String   @unique // Qaysi aniq nusxa ijaraga olingani
+  bookCopyId String // Qaysi aniq nusxa ijaraga olingani
   bookCopy   BookCopy @relation(fields: [bookCopyId], references: [id])
 
   fine Fine?
