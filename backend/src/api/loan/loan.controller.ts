@@ -68,6 +68,14 @@ export const confirmReturnHandler = asyncHandler(
   },
 );
 
+export const directReturnHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.validatedData!.params;
+    const loan = await loanService.directReturn(id);
+    res.status(200).json(loan);
+  },
+);
+
 export const requestRenewalHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;

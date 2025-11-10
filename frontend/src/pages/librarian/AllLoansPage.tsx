@@ -284,6 +284,59 @@ const AllLoansPage: React.FC = () => {
                         py: 3,
                       }}
                     >
+                      {(loan.status === "ACTIVE" || loan.status === "OVERDUE") && (
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          {loan.renewalRequested && (
+                            <ButtonGroup
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                "& .MuiButton-root": { minWidth: "auto", px: 1.5 },
+                              }}
+                            >
+                              <Button
+                                color="success"
+                                onClick={() =>
+                                  handleAction(
+                                    () =>
+                                      api.post(`/loans/${loan.id}/approve-renewal`),
+                                    "So`rov tasdiqlandi!"
+                                  )
+                                }
+                              >
+                                <CheckCircleIcon fontSize="small" />
+                              </Button>
+                              <Button
+                                color="error"
+                                onClick={() =>
+                                  handleAction(
+                                    () =>
+                                      api.post(`/loans/${loan.id}/reject-renewal`),
+                                    "So`rov rad etildi!"
+                                  )
+                                }
+                              >
+                                <CancelIcon fontSize="small" />
+                              </Button>
+                            </ButtonGroup>
+                          )}
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            sx={{ minWidth: "auto", px: 2 }}
+                            onClick={() =>
+                              handleAction(
+                                () =>
+                                  api.post(`/loans/${loan.id}/direct-return`),
+                                "Kitob qaytarildi!"
+                              )
+                            }
+                          >
+                            Qaytarish
+                          </Button>
+                        </Box>
+                      )}
                       {loan.status === "PENDING_RETURN" && (
                         <Button
                           variant="contained"
@@ -299,40 +352,6 @@ const AllLoansPage: React.FC = () => {
                         >
                           Tasdiqlash
                         </Button>
-                      )}
-                      {loan.renewalRequested && loan.status === "ACTIVE" && (
-                        <ButtonGroup
-                          variant="outlined"
-                          size="small"
-                          sx={{
-                            "& .MuiButton-root": { minWidth: "auto", px: 1.5 },
-                          }}
-                        >
-                          <Button
-                            color="success"
-                            onClick={() =>
-                              handleAction(
-                                () =>
-                                  api.post(`/loans/${loan.id}/approve-renewal`),
-                                "So`rov tasdiqlandi!"
-                              )
-                            }
-                          >
-                            <CheckCircleIcon fontSize="small" />
-                          </Button>
-                          <Button
-                            color="error"
-                            onClick={() =>
-                              handleAction(
-                                () =>
-                                  api.post(`/loans/${loan.id}/reject-renewal`),
-                                "So`rov rad etildi!"
-                              )
-                            }
-                          >
-                            <CancelIcon fontSize="small" />
-                          </Button>
-                        </ButtonGroup>
                       )}
                     </TableCell>
                   </TableRow>

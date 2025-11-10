@@ -256,6 +256,79 @@ export const confirmReturn = async (loanId: string) => {
 };
 
 /**
+ * Kutubxonachi tomonidan to'g'ridan-to'g'ri kitobni qaytarish (ACTIVE yoki OVERDUE ijaralar uchun)
+ */
+export const directReturn = async (loanId: string) => {
+  return prisma.$transaction(async (tx) => {
+    const loan = await tx.loan.findUnique({
+      where: { id: loanId },
+      include: { bookCopy: true, user: true },
+    });
+    if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
+
+    if (!['ACTIVE', 'OVERDUE'].includes(loan.status))
+      throw new ApiError(
+        400,
+        'Faqat aktiv yoki muddati o\'tgan ijaralarni qaytarish mumkin.',
+      );
+
+    await redisClient.del(`book:${loan.bookCopy.bookId}`);
+
+    const bookId = loan.bookCopy.bookId;
+
+    const nextInQueue = await tx.reservation.findFirst({
+      where: { bookId, status: 'ACTIVE' },
+      orderBy: { reservedAt: 'asc' },
+      include: { book: true },
+    });
+
+    if (nextInQueue) {
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+      await tx.reservation.update({
+        where: { id: nextInQueue.id },
+        data: {
+          status: 'AWAITING_PICKUP',
+          assignedCopyId: loan.bookCopyId,
+          expiresAt,
+        },
+      });
+
+      await tx.bookCopy.update({
+        where: { id: loan.bookCopyId },
+        data: { status: BookCopyStatus.MAINTENANCE },
+      });
+
+      const newNotification = await tx.notification.create({
+        data: {
+          userId: nextInQueue.userId,
+          message: `Siz navbatda turgan "${nextInQueue.book.title}" kitobi bo'shadi! Uni 48 soat ichida olib keting.`,
+          type: 'RESERVATION_AVAILABLE',
+        },
+      });
+
+      getIo().to(nextInQueue.userId).emit('new_notification', newNotification);
+    } else {
+      await tx.bookCopy.update({
+        where: { id: loan.bookCopyId },
+        data: { status: BookCopyStatus.AVAILABLE },
+      });
+    }
+
+    return tx.loan.update({
+      where: { id: loanId },
+      data: { status: 'RETURNED', returnedAt: new Date() },
+      include: {
+        bookCopy: { include: { book: true } },
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
+    });
+  });
+};
+
+/**
  * Foydalanuvchi ijara muddatini uzaytirishni so'raydi
  */
 export const requestRenewal = async (loanId: string, userId: string) => {

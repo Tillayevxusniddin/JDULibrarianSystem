@@ -59,6 +59,14 @@ router.post(
 );
 
 router.post(
+  '/:id/direct-return',
+  authenticate,
+  authorize(['LIBRARIAN']),
+  validate(loanActionSchema),
+  loanController.directReturnHandler,
+);
+
+router.post(
   '/:id/renew',
   authenticate,
   validate(loanActionSchema),
