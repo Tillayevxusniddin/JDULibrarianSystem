@@ -1,7 +1,7 @@
 ---
 name: library-feature-builder
 description: Specialized agent for JDU Library System that implements features with minimal changes while maintaining design consistency and type safety.
-model: claude-sonnet-4
+model: claude-4.5
 tools: ['read', 'search', 'edit', 'shell']
 ---
 
