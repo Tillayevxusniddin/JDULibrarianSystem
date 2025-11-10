@@ -51,9 +51,9 @@ const AllLoansPage: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<
-    "pending" | "renewal" | "active" | "history"
-  >("pending");
+  const [filter, setFilter] = useState<"renewal" | "active" | "history">(
+    "active"
+  );
 
   const fetchLoans = useCallback(async () => {
     try {
@@ -153,7 +153,6 @@ const AllLoansPage: React.FC = () => {
               },
             }}
           >
-            <Tab label="Qaytarish Kutilyapti" value="pending" />
             <Tab label="Muddat Uzaytirish" value="renewal" />
             <Tab label="Barcha Aktiv Ijaralar" value="active" />
             <Tab label="Ijara Tarixi" value="history" />
@@ -336,22 +335,6 @@ const AllLoansPage: React.FC = () => {
                             Qaytarish
                           </Button>
                         </Box>
-                      )}
-                      {loan.status === "PENDING_RETURN" && (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          sx={{ minWidth: "auto", px: 2 }}
-                          onClick={() =>
-                            handleAction(
-                              () =>
-                                api.post(`/loans/${loan.id}/confirm-return`),
-                              "Qaytarish tasdiqlandi!"
-                            )
-                          }
-                        >
-                          Tasdiqlash
-                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
