@@ -141,5 +141,7 @@ jobs:
             echo "Backend xizmatlari qayta ishga tushirilmoqda..."
             sudo docker compose -f docker-compose.prod.yml pull
             sudo docker compose -f docker-compose.prod.yml up -d --force-recreate
+            echo "Ma'lumotlar bazasi migratsiyalari ishga tushirilmoqda..."
+            sudo docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
             echo "Eski Docker image'lar tozalanmoqda..."
             sudo docker image prune -a -f
