@@ -63,6 +63,9 @@ jobs:
         run: npm ci
 
       - name: Qurish
+        env:
+          VITE_API_URL: https://api.library.manabi.uz/api/v1
+          VITE_SOCKET_URL: https://api.library.manabi.uz
         run: npm run build
 
       - name: AWS hisob ma'lumotlarini sozlash
@@ -87,6 +90,30 @@ jobs:
       - name: Kodni yuklab olish
         uses: actions/checkout@v3
 
+      - name: AWS hisob ma'lumotlarini sozlash
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: ECR'ga login qilish
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Docker image qurish va ECR'ga push qilish
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: library-backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
+
       - name: SSH kalitini sozlash
         uses: webfactory/ssh-agent@v0.5.3
         with:
@@ -95,9 +122,9 @@ jobs:
       - name: .env faylini yaratish
         run: echo "${{ secrets.ENV_FILE_PRODUCTION }}" > ./backend/.env
 
-      - name: Fayllarni EC2'ga rsync orqali deploy qilish
+      - name: Fayllarni EC2'ga rsync orqali deploy qilish (faqat config fayllar)
         run: |
-          rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude '.git' \
+          rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude '.git' --exclude 'src' \
           -e "ssh -o StrictHostKeyChecking=no" \
           ./backend/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/backend/
 
@@ -109,7 +136,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/backend
+            echo "ECR'ga login qilinmoqda..."
+            aws ecr get-login-password --region ap-northeast-1 | sudo docker login --username AWS --password-stdin 908027374428.dkr.ecr.ap-northeast-1.amazonaws.com
             echo "Backend xizmatlari qayta ishga tushirilmoqda..."
-            sudo docker-compose -f docker-compose.prod.yml up -d --build --force-recreate
+            sudo docker compose -f docker-compose.prod.yml pull
+            sudo docker compose -f docker-compose.prod.yml up -d --force-recreate
             echo "Eski Docker image'lar tozalanmoqda..."
             sudo docker image prune -a -f

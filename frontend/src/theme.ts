@@ -47,22 +47,29 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
           },
         }
       : {
-          // Qorong'u rejim uchun palitra
+          // Qorong'u rejim uchun palitra - yangilangan
           primary: {
-            main: blue[300], // Asosiy rang - och ko'k
-            light: blue[100],
-            dark: blue[400],
+            main: '#60a5fa', // Yorqinroq ko'k (blue-400)
+            light: '#93c5fd', // Och ko'k (blue-300)
+            dark: '#3b82f6', // To'q ko'k (blue-500)
           },
           secondary: {
-            main: pink[400],
+            main: '#f472b6', // Yorqin pushti (pink-400)
+            light: '#f9a8d4',
+            dark: '#ec4899',
           },
           background: {
-            default: '#121828', // Orqa fon - juda to'q ko'k-qora
-            paper: '#1a223f', // Qog'oz (kartalar) foni - to'q ko'k
+            default: '#0f172a', // To'qroq slate foni
+            paper: '#1e293b', // Biroz ochroq kartalar foni
           },
           text: {
-            primary: '#e3e3e3',
-            secondary: grey[500],
+            primary: '#f1f5f9', // Aniqroq oq matn
+            secondary: '#94a3b8', // Yaxshilangan ikkinchi matn
+          },
+          divider: 'rgba(148, 163, 184, 0.12)', // Yumshoq ajratuvchi chiziq
+          action: {
+            hover: 'rgba(96, 165, 250, 0.08)', // Ko'kimtir hover effekti
+            selected: 'rgba(96, 165, 250, 0.16)',
           },
         }),
   },
@@ -95,11 +102,15 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
           fontWeight: 600,
           padding: theme.spacing(1.5, 3), // 12px 24px
           borderRadius: theme.customShape.radius.sm,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)', // Yumshoq soya
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : '0 4px 12px rgba(0,0,0,0.1)',
           transition: 'all 0.3s ease-in-out',
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.12)', // Hover effekti uchun soya
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 6px 16px rgba(0,0,0,0.4)'
+              : '0 6px 16px rgba(0,0,0,0.12)',
           },
         }),
       },
@@ -113,6 +124,10 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
         root: ({ theme }) => ({
           backgroundImage: 'none', // MUI ning standart gradientini o'chiramiz
           borderRadius: theme.customShape.radius.md,
+          ...(theme.palette.mode === 'dark' && {
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          }),
         }),
       },
     },
@@ -121,9 +136,13 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
         root: ({ theme }) => ({
           borderRadius: theme.customShape.radius.md,
           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)', // Chiroyliroq standart soya
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(0,0,0,0.4)'
+            : '0 4px 20px rgba(0,0,0,0.05)',
           '&:hover': {
-            boxShadow: '0 8px 30px rgba(0,0,0,0.1)', // Hover uchun kuchliroq soya
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 30px rgba(0,0,0,0.5)'
+              : '0 8px 30px rgba(0,0,0,0.1)',
           },
         }),
       },
@@ -131,17 +150,62 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     // Kiritish maydoni (TextField) uchun
     MuiOutlinedInput: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderWidth: '2px', // Fokus bo'lganda ramka qalinligi
           },
-        },
+          ...(theme.palette.mode === 'dark' && {
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(96, 165, 250, 0.5)',
+            },
+          }),
+        }),
       },
     },
     MuiDialog: {
       styleOverrides: {
         paper: ({ theme }) => ({
           borderRadius: theme.customShape.radius.md,
+          ...(theme.palette.mode === 'dark' && {
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.09))',
+          }),
+        }),
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          ...(theme.palette.mode === 'dark' && {
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+          }),
+        }),
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          ...(theme.palette.mode === 'dark' && {
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+            borderRight: '1px solid rgba(148, 163, 184, 0.12)',
+          }),
+        }),
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          ...(theme.palette.mode === 'dark' && {
+            '&.MuiChip-colorSuccess': {
+              backgroundColor: 'rgba(34, 197, 94, 0.2)',
+              color: '#4ade80',
+              borderColor: 'rgba(34, 197, 94, 0.3)',
+            },
+            '&.MuiChip-colorError': {
+              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              color: '#f87171',
+              borderColor: 'rgba(239, 68, 68, 0.3)',
+            },
+          }),
         }),
       },
     },

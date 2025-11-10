@@ -1,10 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete, TextField, Typography } from '@mui/material';
-import api from '../../api';
-import type { Book, Loan } from '../../types';
-import { useAuthStore } from '../../store/auth.store';
-import toast from 'react-hot-toast';
-import { useNotificationStore } from '../../store/notification.store';
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Autocomplete,
+  TextField,
+  Typography,
+} from "@mui/material";
+import api from "../../api";
+import type { Book, Loan } from "../../types";
+import { useAuthStore } from "../../store/auth.store";
+import toast from "react-hot-toast";
+import { useNotificationStore } from "../../store/notification.store";
 
 interface SearchedUser {
   id: string;
@@ -26,26 +37,33 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
 
   // --- IJARAGA BERISH OYNASI UCHUN STATE'LAR ---
   const [loanModalOpen, setLoanModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [userOptions, setUserOptions] = useState<SearchedUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
   // Barcode selection as searchable select
   const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
+  const fetchNotifications = useNotificationStore(
+    (state) => state.fetchNotifications
+  );
 
   useEffect(() => {
     // Foydalanuvchining shu nomdagi kitobdan ijarasi bor-yo'qligini tekshirish
     if (user && book) {
       setIsCheckingLoan(true);
-      api.get<Loan[]>('/loans/my').then(response => {
-        // --- O'ZGARTIRILGAN MANTIQ: Endi loan.bookCopy.book.id orqali tekshiramiz ---
-        const loanForThisBook = response.data.find(loan =>
-          loan.bookCopy.book.id === book.id && ['ACTIVE', 'OVERDUE'].includes(loan.status)
-        );
-        setUserLoan(loanForThisBook || null);
-      }).finally(() => setIsCheckingLoan(false));
+      api
+        .get<Loan[]>("/loans/my")
+        .then((response) => {
+          // --- O'ZGARTIRILGAN MANTIQ: Endi loan.bookCopy.book.id orqali tekshiramiz ---
+          const loanForThisBook = response.data.find(
+            (loan) =>
+              loan.bookCopy.book.id === book.id &&
+              ["ACTIVE", "OVERDUE"].includes(loan.status)
+          );
+          setUserLoan(loanForThisBook || null);
+        })
+        .finally(() => setIsCheckingLoan(false));
     } else {
       setIsCheckingLoan(false);
     }
@@ -59,14 +77,20 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
     }
     setSearchLoading(true);
     const timer = setTimeout(() => {
-      api.get<SearchedUser[]>(`/users/search?q=${searchQuery}`)
-        .then(response => setUserOptions(response.data))
+      api
+        .get<SearchedUser[]>(`/users/search?q=${searchQuery}`)
+        .then((response) => setUserOptions(response.data))
         .finally(() => setSearchLoading(false));
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const handleAction = async (action: () => Promise<any>, successMessage: string, errorMessage: string, shouldFetchNotifications = false) => {
+  const handleAction = async (
+    action: () => Promise<any>,
+    successMessage: string,
+    errorMessage: string,
+    shouldFetchNotifications = false
+  ) => {
     setLoading(true);
     try {
       await action();
@@ -83,27 +107,49 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
     }
   };
 
-  const handleReserve = () => handleAction(() => api.post(`/books/${book.id}/reserve`), 'Kitob muvaffaqiyatli band qilindi!', 'Kitobni band qilishda xatolik yuz berdi.', true);
-  const handleReturn = () => userLoan && handleAction(() => api.post(`/loans/${userLoan.id}/return`), 'Kitobni qaytarish so\'rovi yuborildi.', 'Kitobni qaytarishda xatolik yuz berdi.');
+  const handleReserve = () =>
+    handleAction(
+      () => api.post(`/books/${book.id}/reserve`),
+      "Kitob muvaffaqiyatli band qilindi!",
+      "Kitobni band qilishda xatolik yuz berdi.",
+      true
+    );
+  const handleReturn = () =>
+    userLoan &&
+    handleAction(
+      () => api.post(`/loans/${userLoan.id}/return`),
+      "Kitobni qaytarish so'rovi yuborildi.",
+      "Kitobni qaytarishda xatolik yuz berdi."
+    );
 
   // --- O'ZGARTIRILGAN MANTIQ: Ijaraga berish endi barcode bilan ishlaydi ---
   const handleCreateLoan = () => {
-    if (!selectedUser) return toast.error('Iltimos, foydalanuvchini tanlang.');
-    if (!selectedBarcode || !selectedBarcode.trim()) return toast.error('Iltimos, kitob nusxasining shtrix-kodini tanlang.');
+    if (!selectedUser) return toast.error("Iltimos, foydalanuvchini tanlang.");
+    if (!selectedBarcode || !selectedBarcode.trim())
+      return toast.error("Iltimos, kitob nusxasining shtrix-kodini tanlang.");
 
     handleAction(
-      () => api.post('/loans', { barcode: selectedBarcode.trim(), userId: selectedUser.id }),
-      'Kitob muvaffaqiyatli ijaraga berildi.',
-      'Kitobni ijaraga berishda xatolik yuz berdi.'
+      () =>
+        api.post("/loans", {
+          barcode: selectedBarcode.trim(),
+          userId: selectedUser.id,
+        }),
+      "Kitob muvaffaqiyatli ijaraga berildi.",
+      "Kitobni ijaraga berishda xatolik yuz berdi."
     ).then(() => {
       setLoanModalOpen(false);
       setSelectedUser(null);
-      setSearchQuery('');
+      setSearchQuery("");
       setSelectedBarcode(null);
     });
   };
 
-  if (!user || isCheckingLoan) return <Box className="pt-6 mt-6 border-t"><CircularProgress size={24} /></Box>;
+  if (!user || isCheckingLoan)
+    return (
+      <Box className="pt-6 mt-6 border-t">
+        <CircularProgress size={24} />
+      </Box>
+    );
 
   const canReserveOrBorrow = book.availableCopies > 0;
 
@@ -111,28 +157,80 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
     <Box className="flex items-center pt-6 mt-6 space-x-2 border-t">
       {loading && <CircularProgress size={24} />}
 
-      {user.role === 'LIBRARIAN' && canReserveOrBorrow && (
-        <Button variant="contained" onClick={() => setLoanModalOpen(true)} disabled={loading}>
+      {user.role === "LIBRARIAN" && canReserveOrBorrow && (
+        <Button
+          variant="contained"
+          onClick={() => setLoanModalOpen(true)}
+          disabled={loading}
+          sx={{
+            background: (theme) =>
+              theme.palette.mode === "dark"
+                ? "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)"
+                : undefined,
+            boxShadow: (theme) =>
+              theme.palette.mode === "dark"
+                ? "0 4px 20px rgba(96, 165, 250, 0.4)"
+                : undefined,
+          }}
+        >
           Ijaraga Berish
         </Button>
       )}
 
-      {user.role === 'USER' && !userLoan && (
-        <Button variant="contained" color="secondary" onClick={handleReserve} disabled={loading}>
+      {user.role === "USER" && !userLoan && (
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleReserve}
+          disabled={loading}
+          sx={{
+            background: (theme) =>
+              theme.palette.mode === "dark"
+                ? "linear-gradient(135deg, #f472b6 0%, #ec4899 100%)"
+                : undefined,
+            boxShadow: (theme) =>
+              theme.palette.mode === "dark"
+                ? "0 4px 20px rgba(244, 114, 182, 0.4)"
+                : undefined,
+          }}
+        >
           Band Qilish
         </Button>
       )}
 
-      {user.role === 'USER' && userLoan && (
-        <Button variant="contained" color="warning" onClick={handleReturn} disabled={loading}>
+      {user.role === "USER" && userLoan && (
+        <Button
+          variant="contained"
+          color="warning"
+          onClick={handleReturn}
+          disabled={loading}
+          sx={{
+            boxShadow: (theme) =>
+              theme.palette.mode === "dark"
+                ? "0 4px 20px rgba(251, 191, 36, 0.3)"
+                : undefined,
+          }}
+        >
           Kitobni Qaytarish
         </Button>
       )}
 
       {/* --- YANGI IJARAGA BERISH OYNASI --- */}
-      <Dialog open={loanModalOpen} onClose={() => setLoanModalOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: 'bold' }}>Ijaraga Berish</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: '20px !important' }}>
+      <Dialog
+        open={loanModalOpen}
+        onClose={() => setLoanModalOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle sx={{ fontWeight: "bold" }}>Ijaraga Berish</DialogTitle>
+        <DialogContent
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 3,
+            pt: "20px !important",
+          }}
+        >
           <Typography variant="body1">
             Kitob nomi: <strong>{book.title}</strong>
           </Typography>
@@ -141,7 +239,7 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
             autoHighlight
             fullWidth
             options={(book.copies || [])
-              .filter((c) => c.status === 'AVAILABLE')
+              .filter((c) => c.status === "AVAILABLE")
               .map((c) => c.barcode)}
             value={selectedBarcode}
             onChange={(_, newValue) => setSelectedBarcode(newValue)}
@@ -158,7 +256,9 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
           />
           <Autocomplete
             options={userOptions}
-            getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.email})`}
+            getOptionLabel={(option) =>
+              `${option.firstName} ${option.lastName} (${option.email})`
+            }
             loading={searchLoading}
             value={selectedUser}
             onChange={(_, newValue) => setSelectedUser(newValue)}
@@ -174,7 +274,9 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {searchLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {searchLoading ? (
+                        <CircularProgress color="inherit" size={20} />
+                      ) : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),
@@ -185,7 +287,19 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
         </DialogContent>
         <DialogActions sx={{ p: (t) => t.spacing(2, 3) }}>
           <Button onClick={() => setLoanModalOpen(false)}>Bekor qilish</Button>
-          <Button onClick={handleCreateLoan} variant="contained" disabled={loading || !selectedUser || !selectedBarcode}>Tasdiqlash</Button>
+          <Button
+            onClick={handleCreateLoan}
+            variant="contained"
+            disabled={loading || !selectedUser || !selectedBarcode}
+            sx={{
+              background: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)"
+                  : undefined,
+            }}
+          >
+            Tasdiqlash
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

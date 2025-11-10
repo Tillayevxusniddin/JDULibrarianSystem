@@ -67,3 +67,4 @@ SMTP_PASS=
 
 ## Contributing
 - Use clear, imperative commit messages (e.g., `feat: add reservation status filter`).
+
