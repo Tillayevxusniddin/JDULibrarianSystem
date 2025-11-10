@@ -250,7 +250,11 @@ export const confirmReturn = async (loanId: string) => {
 
     return tx.loan.update({
       where: { id: loanId },
-      data: { status: 'RETURNED', returnedAt: new Date() },
+      data: {
+        status: 'RETURNED',
+        returnedAt: new Date(),
+        renewalRequested: false,
+      },
     });
   });
 };
@@ -317,7 +321,11 @@ export const directReturn = async (loanId: string) => {
 
     return tx.loan.update({
       where: { id: loanId },
-      data: { status: 'RETURNED', returnedAt: new Date() },
+      data: {
+        status: 'RETURNED',
+        returnedAt: new Date(),
+        renewalRequested: false,
+      },
       include: {
         bookCopy: { include: { book: true } },
         user: {
