@@ -150,8 +150,14 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            set -euo pipefail
+            set -euxo pipefail
             cd ~/backend
+            echo "Repo files in ~/backend:"
+            ls -la
+            echo "\n.deploy.env content (BACKEND_IMAGE_TAG):"
+            cat .deploy.env || (echo ".deploy.env missing" && exit 1)
+            echo "\nDocker Compose version:"
+            sudo docker compose version || true
             echo "ECR'ga login qilinmoqda..."
             aws ecr get-login-password --region ap-northeast-1 | sudo docker login --username AWS --password-stdin 908027374428.dkr.ecr.ap-northeast-1.amazonaws.com
             echo "Backend xizmatlari qayta ishga tushirilmoqda..."
