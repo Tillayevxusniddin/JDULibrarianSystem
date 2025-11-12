@@ -164,10 +164,10 @@ jobs:
             export AWS_REGION='${{ secrets.AWS_REGION }}'
             aws ecr get-login-password --region "$AWS_REGION" | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             echo "Backend xizmatlari qayta ishga tushirilmoqda..."
-            # Pull and run with pinned tag from .deploy.env
-            sudo docker compose --env-file .deploy.env -f docker-compose.prod.yml pull
-            sudo docker compose --env-file .deploy.env -f docker-compose.prod.yml up -d --force-recreate
+            # Pull and run with pinned tag; load both default .env and .deploy.env
+            sudo docker compose --env-file .env --env-file .deploy.env -f docker-compose.prod.yml pull
+            sudo docker compose --env-file .env --env-file .deploy.env -f docker-compose.prod.yml up -d --force-recreate
             echo "Ma'lumotlar bazasi migratsiyalari ishga tushirilmoqda..."
-            sudo docker compose --env-file .deploy.env -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
+            sudo docker compose --env-file .env --env-file .deploy.env -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
             echo "Eski Docker image'lar tozalanmoqda..."
             sudo docker image prune -a -f
