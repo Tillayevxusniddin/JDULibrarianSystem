@@ -22,7 +22,9 @@ services:
       - redis_data_prod:/data
 
   api:
-    image: 908027374428.dkr.ecr.ap-northeast-1.amazonaws.com/library-backend:latest
+    # Pin image by tag passed via env-file (.deploy.env). Default to 'latest' for
+    # backward compatibility if the env var is not present.
+    image: 908027374428.dkr.ecr.ap-northeast-1.amazonaws.com/library-backend:${BACKEND_IMAGE_TAG:-latest}
     container_name: library_api_prod
     restart: always
     ports:
