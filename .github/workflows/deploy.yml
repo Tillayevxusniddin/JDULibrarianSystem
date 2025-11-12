@@ -123,7 +123,9 @@ jobs:
                        -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
+          # write the image tag to a deploy env-file for compose
+          echo "BACKEND_IMAGE_TAG=$IMAGE_TAG" > .deploy.env
+          echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: SSH kalitini sozlash
         uses: webfactory/ssh-agent@v0.5.3
@@ -138,6 +140,8 @@ jobs:
           rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude '.git' --exclude 'src' \
           -e "ssh -o StrictHostKeyChecking=no" \
           ./backend/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/backend/
+          # Copy the generated deploy env file as well
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./.deploy.env ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/backend/.deploy.env
 
       - name: EC2'da masofaviy buyruqlarni bajarish
         uses: appleboy/ssh-action@master
@@ -146,13 +150,15 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -euo pipefail
             cd ~/backend
             echo "ECR'ga login qilinmoqda..."
             aws ecr get-login-password --region ap-northeast-1 | sudo docker login --username AWS --password-stdin 908027374428.dkr.ecr.ap-northeast-1.amazonaws.com
             echo "Backend xizmatlari qayta ishga tushirilmoqda..."
-            sudo docker compose -f docker-compose.prod.yml pull
-            sudo docker compose -f docker-compose.prod.yml up -d --force-recreate
+            # Pull and run with pinned tag from .deploy.env
+            sudo docker compose --env-file .deploy.env -f docker-compose.prod.yml pull
+            sudo docker compose --env-file .deploy.env -f docker-compose.prod.yml up -d --force-recreate
             echo "Ma'lumotlar bazasi migratsiyalari ishga tushirilmoqda..."
-            sudo docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
+            sudo docker compose --env-file .deploy.env -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
             echo "Eski Docker image'lar tozalanmoqda..."
             sudo docker image prune -a -f
