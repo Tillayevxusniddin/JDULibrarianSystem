@@ -76,7 +76,18 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: S3'ga deploy qilish
-        run: aws s3 sync ./dist/ s3://${{ secrets.S3_BUCKET_NAME }}/ --delete
+        run: |
+          # Sync HTML files with no-cache to ensure fresh content
+          aws s3 sync ./dist/ s3://${{ secrets.S3_BUCKET_NAME }}/ \
+            --exclude "*" --include "*.html" \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --delete
+          
+          # Sync JS/CSS with longer cache but versioned filenames
+          aws s3 sync ./dist/ s3://${{ secrets.S3_BUCKET_NAME }}/ \
+            --exclude "*.html" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --delete
 
       - name: CloudFront keshini tozalash
         run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
