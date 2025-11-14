@@ -17,6 +17,15 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
+  // Sync theme mode with html element class to prevent background mismatch
+  useEffect(() => {
+    if (themeMode === 'dark') {
+      document.documentElement.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+    }
+  }, [themeMode]);
+
   useEffect(() => {
     const syncTabs = (event: StorageEvent) => {
       // Agar boshqa vkladkada token o'chirilsa (logout)
