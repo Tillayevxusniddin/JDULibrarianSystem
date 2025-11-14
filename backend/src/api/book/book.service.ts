@@ -28,7 +28,7 @@ export const createBook = async (
     const newBook = await tx.book.create({
       data: {
         ...bookData,
-        coverImage: bookData.coverImage || DEFAULT_BOOK_COVER,
+        coverImage: bookData.coverImage || null,
       },
       include: { category: true },
     });
@@ -472,7 +472,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
           publisher: row.publisher ? String(row.publisher) : null,
           publishedYear: row.publishedYear ? Number(row.publishedYear) : null,
           pageCount: row.pageCount ? Number(row.pageCount) : null,
-          coverImage: '/public/uploads/books/default.png',
+          coverImage: null,
           categoryId: categoryId,
         };
 
