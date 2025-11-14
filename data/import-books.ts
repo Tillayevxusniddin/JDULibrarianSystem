@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { parse } from 'csv-parse/sync';
 
 const API_BASE_URL = 'https://api.library.manabi.uz/api/v1';
 
@@ -103,23 +104,25 @@ async function createBookWithCopies(
 
 function parseCSV(filePath: string): CSVBook[] {
   const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.trim().split('\n');
-  const books: CSVBook[] = [];
+  
+  // Parse CSV properly handling quoted fields with commas
+  const records = parse(content, {
+    columns: true, // Use first row as column names
+    skip_empty_lines: true,
+    trim: true,
+    quote: '"',
+    escape: '"',
+    relax_quotes: true,
+    relax_column_count: true, // Allow inconsistent column counts
+  });
 
-  for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i].split(',');
-    if (parts.length >= 5) {
-      books.push({
-        ID: parts[0].trim(),
-        Name: parts[1].trim(),
-        Author: parts[2].trim(),
-        Category: parts[3].trim(),
-        Language: parts[4].trim(),
-      });
-    }
-  }
-
-  return books;
+  return records.map((record: any) => ({
+    ID: record.ID || '',
+    Name: record.Name || '',
+    Author: record.Author || '',
+    Category: record.Category || '',
+    Language: record.Language || '',
+  }));
 }
 
 async function main() {
