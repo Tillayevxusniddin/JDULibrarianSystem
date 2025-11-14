@@ -183,7 +183,8 @@ const BookDetailPage: React.FC = () => {
       </Alert>
     );
 
-  const placeholderImage = `https://placehold.co/400x600/EBF4FF/7F9CF5?text=${encodeURIComponent(book.title)}`;
+  // Use the same emoji placeholder as BookCard to avoid Unicode encoding issues
+  const placeholderImage = `https://placehold.co/400x600/667eea/764ba2?text=📚`;
   const imageUrl = book.coverImage || placeholderImage;
 
   return (
