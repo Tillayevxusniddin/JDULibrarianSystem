@@ -26,7 +26,8 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
   // --- 2-QADAM: Foydalanuvchi ma'lumotini store'dan olamiz ---
   const { user } = useAuthStore();
   
-  const placeholderImage = `https://placehold.co/400x600/EBF4FF/7F9CF5?text=${encodeURIComponent(book.title)}`;
+  // Use a solid color placeholder instead of text-based one to avoid Unicode issues
+  const placeholderImage = `https://placehold.co/400x600/667eea/764ba2?text=📚`;
   const imageUrl = book.coverImage || placeholderImage;
 
 
