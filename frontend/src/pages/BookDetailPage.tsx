@@ -37,6 +37,8 @@ import { useAuthStore } from "../store/auth.store";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
 
+import defaultBookCover from '../assets/default-book-cover.png';
+
 // Animatsiya uchun variantlar
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -183,8 +185,7 @@ const BookDetailPage: React.FC = () => {
       </Alert>
     );
 
-  const placeholderImage = `https://placehold.co/400x600/EBF4FF/7F9CF5?text=${encodeURIComponent(book.title)}`;
-  const imageUrl = book.coverImage || placeholderImage;
+  const imageUrl = book.coverImage || defaultBookCover;
 
   return (
     <Box>

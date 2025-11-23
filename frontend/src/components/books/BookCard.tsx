@@ -10,6 +10,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 // --- 1-QADAM: useAuthStore'ni import qilamiz ---
 import { useAuthStore } from '../../store/auth.store';
 
+import defaultBookCover from '../../assets/default-book-cover.png';
+
 interface BookCardProps {
   book: Book;
   onEdit: (book: Book) => void;
@@ -26,8 +28,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
   // --- 2-QADAM: Foydalanuvchi ma'lumotini store'dan olamiz ---
   const { user } = useAuthStore();
   
-  const placeholderImage = `https://placehold.co/400x600/EBF4FF/7F9CF5?text=${encodeURIComponent(book.title)}`;
-  const imageUrl = book.coverImage || placeholderImage;
+  const imageUrl = book.coverImage || defaultBookCover;
 
 
   const { label, color } = getStatusChip(book.availableCopies);
