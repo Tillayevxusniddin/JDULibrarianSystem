@@ -86,6 +86,8 @@ export const findBooks = async (
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
       { author: { contains: search, mode: 'insensitive' } },
+      { copies: { some: { barcode: { contains: search, mode: 'insensitive' } } } },
+      { copies: { some: { id: { contains: search, mode: 'insensitive' } } } },
     ];
   if (categoryId) where.categoryId = categoryId;
   if (availability === 'available')
