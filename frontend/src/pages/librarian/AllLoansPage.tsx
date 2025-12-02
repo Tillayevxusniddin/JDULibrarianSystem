@@ -1,6 +1,6 @@
 // src/pages/librarian/AllLoansPage.tsx
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import { responsiveTableSx } from "../../components/common/tableResponsive";
+import ConfirmationDialog from "../../components/common/ConfirmationDialog";
 import api from "../../api";
 import type { Loan, LoanStatus } from "../../types";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -54,6 +55,11 @@ const AllLoansPage: React.FC = () => {
   const [filter, setFilter] = useState<"renewal" | "active" | "history">(
     "active"
   );
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    loanId: number | null;
+  }>({ open: false, loanId: null });
+  const pendingReturnRef = useRef<{ loanId: number; toastId: string } | null>(null);
 
   const fetchLoans = useCallback(async () => {
     try {
@@ -89,6 +95,90 @@ const AllLoansPage: React.FC = () => {
         error.response?.data?.message || "Amalni bajarishda xatolik yuz berdi.";
       toast.error(message);
     }
+  };
+
+  const handleReturnClick = (loanId: number) => {
+    setConfirmDialog({ open: true, loanId });
+  };
+
+  const handleConfirmReturn = async () => {
+    const loanId = confirmDialog.loanId;
+    setConfirmDialog({ open: false, loanId: null });
+
+    if (!loanId) return;
+
+    // Optimistic update: remove the loan from the list immediately
+    setLoans((prevLoans) => prevLoans.filter((loan) => loan.id !== loanId));
+
+    pendingReturnRef.current = { loanId, toastId: "" };
+
+    const actionToastId = toast(
+      (t) => (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            minWidth: "300px",
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            Kitob qaytarilmoqda...
+          </Typography>
+          <Button
+            size="small"
+            variant="contained"
+            color="warning"
+            onClick={() => {
+              if (pendingReturnRef.current?.loanId === loanId) {
+                pendingReturnRef.current = null;
+                toast.dismiss(t.id);
+                toast.success("Qaytarish bekor qilindi");
+                // Revert optimistic update
+                fetchLoans();
+              }
+            }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              px: 2,
+              boxShadow: 2,
+              "&:hover": {
+                boxShadow: 4,
+              },
+            }}
+          >
+            Bekor qilish
+          </Button>
+        </Box>
+      ),
+      {
+        duration: 5000,
+      }
+    );
+
+    pendingReturnRef.current.toastId = actionToastId;
+
+    setTimeout(async () => {
+      if (pendingReturnRef.current?.loanId === loanId) {
+        try {
+          await api.post(`/loans/${loanId}/direct-return`);
+          toast.success("Kitob muvaffaqiyatli qaytarildi!", { id: actionToastId });
+        } catch (error: any) {
+          const message =
+            error.response?.data?.message || "Kitobni qaytarishda xatolik yuz berdi.";
+          toast.error(message, { id: actionToastId });
+          // Revert optimistic update on error
+          fetchLoans();
+        }
+        pendingReturnRef.current = null;
+      }
+    }, 5000);
+  };
+
+  const handleCancelReturn = () => {
+    setConfirmDialog({ open: false, loanId: null });
   };
 
   if (loading)
@@ -324,13 +414,7 @@ const AllLoansPage: React.FC = () => {
                             color="success"
                             size="small"
                             sx={{ minWidth: "auto", px: 2 }}
-                            onClick={() =>
-                              handleAction(
-                                () =>
-                                  api.post(`/loans/${loan.id}/direct-return`),
-                                "Kitob qaytarildi!"
-                              )
-                            }
+                            onClick={() => handleReturnClick(loan.id)}
                           >
                             Qaytarish
                           </Button>
@@ -344,6 +428,17 @@ const AllLoansPage: React.FC = () => {
           </TableContainer>
         )}
       </Paper>
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        title="Kitobni qaytarishni tasdiqlang"
+        message="Haqiqatan ham bu kitobni qaytarilgan deb belgilamoqchimisiz?"
+        onConfirm={handleConfirmReturn}
+        onCancel={handleCancelReturn}
+        confirmText="Qaytarish"
+        cancelText="Bekor qilish"
+        confirmColor="success"
+      />
     </Box>
   );
 };
