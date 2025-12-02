@@ -57,9 +57,9 @@ const AllLoansPage: React.FC = () => {
   );
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
-    loanId: number | null;
+    loanId: string | null;
   }>({ open: false, loanId: null });
-  const pendingReturnRef = useRef<{ loanId: number; toastId: string } | null>(null);
+  const pendingReturnRef = useRef<{ loanId: string; toastId: string } | null>(null);
 
   const fetchLoans = useCallback(async () => {
     try {
@@ -97,7 +97,7 @@ const AllLoansPage: React.FC = () => {
     }
   };
 
-  const handleReturnClick = (loanId: number) => {
+  const handleReturnClick = (loanId: string) => {
     setConfirmDialog({ open: true, loanId });
   };
 
