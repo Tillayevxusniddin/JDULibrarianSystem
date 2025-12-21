@@ -15,18 +15,19 @@ import {
   TableRow,
   Chip,
   Button,
-  ButtonGroup,
   Tabs,
   Tab,
+  TextField,
+  IconButton,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import { responsiveTableSx } from "../../components/common/tableResponsive";
 import ConfirmationDialog from "../../components/common/ConfirmationDialog";
-import ExtendLoanDialog from "../../components/common/ExtendLoanDialog";
 import api from "../../api";
 import type { Loan, LoanStatus } from "../../types";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 import toast from "react-hot-toast";
 import generateLoanHistoryPdf from "../../utils/generateLoanHistoryPdf";
 
@@ -53,17 +54,13 @@ const AllLoansPage: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"renewal" | "active" | "history">(
-    "active"
-  );
+  const [filter, setFilter] = useState<"active" | "history">("active");
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     loanId: string | null;
   }>({ open: false, loanId: null });
-  const [extendDialog, setExtendDialog] = useState<{
-    open: boolean;
-    loan: Loan | null;
-  }>({ open: false, loan: null });
+  const [editingLoanId, setEditingLoanId] = useState<string | null>(null);
+  const [editedDate, setEditedDate] = useState<string>("");
   const pendingReturnRef = useRef<{ loanId: string; toastId: string } | null>(null);
 
   const fetchLoans = useCallback(async () => {
@@ -186,25 +183,32 @@ const AllLoansPage: React.FC = () => {
     setConfirmDialog({ open: false, loanId: null });
   };
 
-  const handleExtendClick = (loan: Loan) => {
-    setExtendDialog({ open: true, loan });
+  const handleEditClick = (loan: Loan) => {
+    setEditingLoanId(loan.id);
+    setEditedDate(new Date(loan.dueDate).toISOString().split("T")[0]);
   };
 
-  const handleConfirmExtend = async (newDueDate: string) => {
-    const loan = extendDialog.loan;
-    setExtendDialog({ open: false, loan: null });
-
-    if (!loan) return;
-
-    await handleAction(
-      () =>
-        api.post(`/loans/${loan.id}/approve-renewal`, { newDueDate }),
-      "Ijara muddati muvaffaqiyatli uzaytirildi!"
-    );
+  const handleCancelEdit = () => {
+    setEditingLoanId(null);
+    setEditedDate("");
   };
 
-  const handleCancelExtend = () => {
-    setExtendDialog({ open: false, loan: null });
+  const handleSaveDate = async (loanId: string) => {
+    if (!editedDate) {
+      toast.error("Yangi muddatni tanlang");
+      return;
+    }
+
+    try {
+      await api.post(`/loans/${loanId}/approve-renewal`, { newDueDate: editedDate });
+      toast.success("Ijara muddati muvaffaqiyatli uzaytirildi!");
+      setEditingLoanId(null);
+      setEditedDate("");
+      fetchLoans();
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Muddatni yangilashda xatolik yuz berdi.";
+      toast.error(message);
+    }
   };
 
   if (loading)
@@ -269,7 +273,6 @@ const AllLoansPage: React.FC = () => {
               },
             }}
           >
-            <Tab label="Muddat Uzaytirish" value="renewal" />
             <Tab label="Barcha Aktiv Ijaralar" value="active" />
             <Tab label="Ijara Tarixi" value="history" />
           </Tabs>
@@ -380,7 +383,50 @@ const AllLoansPage: React.FC = () => {
                         py: 3,
                       }}
                     >
-                      {new Date(loan.dueDate).toLocaleDateString()}
+                      {editingLoanId === loan.id ? (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <TextField
+                            type="date"
+                            size="small"
+                            value={editedDate}
+                            onChange={(e) => setEditedDate(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            inputProps={{
+                              min: new Date().toISOString().split("T")[0],
+                            }}
+                            sx={{ minWidth: 150 }}
+                          />
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleSaveDate(loan.id)}
+                          >
+                            <CheckIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={handleCancelEdit}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography>
+                            {new Date(loan.dueDate).toLocaleDateString()}
+                          </Typography>
+                          {(loan.status === "ACTIVE" || loan.status === "OVERDUE") && (
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleEditClick(loan)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      )}
                     </TableCell>
                     <TableCell
                       data-label="Statusi"
@@ -399,45 +445,22 @@ const AllLoansPage: React.FC = () => {
                         py: 3,
                       }}
                     >
-                      {(loan.status === "ACTIVE" || loan.status === "OVERDUE") && (
+                      {(loan.status === "ACTIVE" || loan.status === "OVERDUE" || loan.status === "PENDING_RETURN") && (
                         <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-                          {loan.renewalRequested && (
-                            <ButtonGroup
-                              variant="outlined"
+                          {(loan.status === "ACTIVE" || loan.status === "OVERDUE") && (
+                            <Button
+                              variant="contained"
+                              color="success"
                               size="small"
-                              sx={{
-                                "& .MuiButton-root": { minWidth: "auto", px: 1.5 },
-                              }}
+                              sx={{ minWidth: "auto", px: 2 }}
+                              onClick={() => handleReturnClick(loan.id)}
                             >
-                              <Button
-                                color="success"
-                                onClick={() => handleExtendClick(loan)}
-                              >
-                                <CheckCircleIcon fontSize="small" />
-                              </Button>
-                              <Button
-                                color="error"
-                                onClick={() =>
-                                  handleAction(
-                                    () =>
-                                      api.post(`/loans/${loan.id}/reject-renewal`),
-                                    "So`rov rad etildi!"
-                                  )
-                                }
-                              >
-                                <CancelIcon fontSize="small" />
-                              </Button>
-                            </ButtonGroup>
+                              Qaytarish
+                            </Button>
                           )}
-                          <Button
-                            variant="contained"
-                            color="success"
-                            size="small"
-                            sx={{ minWidth: "auto", px: 2 }}
-                            onClick={() => handleReturnClick(loan.id)}
-                          >
-                            Qaytarish
-                          </Button>
+                          {loan.status === "PENDING_RETURN" && (
+                            <Chip label="Qaytarish Kutilmoqda" color="warning" size="small" />
+                          )}
                         </Box>
                       )}
                     </TableCell>
@@ -458,14 +481,6 @@ const AllLoansPage: React.FC = () => {
         confirmText="Qaytarish"
         cancelText="Bekor qilish"
         confirmColor="success"
-      />
-
-      <ExtendLoanDialog
-        open={extendDialog.open}
-        currentDueDate={extendDialog.loan?.dueDate || ""}
-        bookTitle={extendDialog.loan?.bookCopy.book.title}
-        onConfirm={handleConfirmExtend}
-        onCancel={handleCancelExtend}
       />
     </Box>
   );
