@@ -16,7 +16,8 @@ export const DEFAULT_CHANNEL_LOGO =
 export const BORROWING_LIMIT = 3; // Bir foydalanuvchi bir vaqtda nechta kitob olishi mumkin
 export const LOAN_DURATION_DAYS = 14; // Ijaraning standart muddati (kunlarda)
 export const RENEWAL_DURATION_DAYS = 14; // Muddatni uzaytirish muddati (kunlarda)
-export const RESERVATION_PICKUP_HOURS = 48; // Band qilingan kitobni olib ketish muddati (soatlarda)
+// COMMENTED OUT - Reservation feature disabled
+// export const RESERVATION_PICKUP_HOURS = 48; // Band qilingan kitobni olib ketish muddati (soatlarda)
 
 // Jarimalar
 export const FINE_AMOUNT = 5000; // Muddati o'tgan kitob uchun standart jarima miqdori

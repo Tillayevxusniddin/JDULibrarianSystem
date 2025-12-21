@@ -1,3 +1,5 @@
+// COMMENTED OUT - Reservation feature disabled
+/*
 // src/pages/librarian/ReservationsPage.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Alert } from '@mui/material';
@@ -89,3 +91,4 @@ const ReservationsPage: React.FC = () => {
 };
 
 export default ReservationsPage;
+*/

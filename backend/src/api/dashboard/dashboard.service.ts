@@ -37,14 +37,20 @@ export const getLibrarianStats = async () => {
  * @param userId Foydalanuvchining IDsi
  */
 export const getUserStats = async (userId: string) => {
-  // Bu funksiya o'zgarishsiz qoladi, chunki Loan va Reservation
-  // jadvallarida userId bilan to'g'ridan-to'g'ri bog'liqlik mavjud.
-  const [activeLoans, activeReservations] = await prisma.$transaction([
+  // COMMENTED OUT - Reservation feature disabled
+  // const [activeLoans, activeReservations] = await prisma.$transaction([
+  const [activeLoans] = await prisma.$transaction([
     prisma.loan.count({ where: { userId, status: 'ACTIVE' } }),
-    prisma.reservation.count({
-      where: { userId, status: { in: ['ACTIVE', 'AWAITING_PICKUP'] } },
-    }),
+    // COMMENTED OUT - Reservation feature disabled
+    // prisma.reservation.count({
+    //   where: { userId, status: { in: ['ACTIVE', 'AWAITING_PICKUP'] } },
+    // }),
   ]);
 
-  return { activeLoans, activeReservations };
+  return { 
+    activeLoans, 
+    // COMMENTED OUT - Reservation feature disabled
+    // activeReservations 
+    activeReservations: 0 
+  };
 };

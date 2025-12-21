@@ -1,3 +1,5 @@
+// COMMENTED OUT - Reservation feature disabled
+/*
 import { z } from 'zod';
 const emptySchema = z.object({}).optional();
 export const reservationActionSchema = z.object({
@@ -5,3 +7,4 @@ export const reservationActionSchema = z.object({
   body: emptySchema,
   query: emptySchema,
 });
+*/

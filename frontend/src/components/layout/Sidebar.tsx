@@ -60,12 +60,15 @@ const navItems = [
     path: "/my-loans",
     role: ["USER"],
   },
+  // COMMENTED OUT - Reservation feature disabled
+  /*
   {
     text: "Mening Rezervlarim",
     icon: <BookmarkAddedIcon />,
     path: "/my-reservations",
     role: ["USER"],
   },
+  */
   {
     text: "Bildirishnomalar",
     icon: <NotificationsIcon />,
@@ -114,12 +117,15 @@ const adminNavItems = [
     path: "/all-loans",
     role: ["LIBRARIAN"],
   },
+  // COMMENTED OUT - Reservation feature disabled
+  /*
   {
     text: "Rezervlar Boshqaruvi",
     icon: <BookmarksIcon />,
     path: "/all-reservations",
     role: ["LIBRARIAN"],
   },
+  */
   {
     text: "Kategoriyalar",
     icon: <CategoryIcon />,

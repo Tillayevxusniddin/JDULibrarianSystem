@@ -298,7 +298,9 @@ export const deleteBookCopy = async (copyId: string) => {
 
 /**
  * Kitob nomini band qiladi. Bo'sh nusxa bo'lsa, uni tayinlaydi. Bo'lmasa, navbatga qo'yadi.
+ * COMMENTED OUT - Reservation feature disabled
  */
+/*
 export const reserveBook = async (bookId: string, userId: string) => {
   return prisma.$transaction(async (tx) => {
     const activeReservation = await tx.reservation.findFirst({
@@ -369,6 +371,7 @@ export const reserveBook = async (bookId: string, userId: string) => {
     return reservation;
   });
 };
+*/
 
 /**
  * Kitobga izoh qo'shadi (o'zgarishsiz)
