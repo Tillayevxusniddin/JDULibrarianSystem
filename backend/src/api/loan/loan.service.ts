@@ -385,8 +385,8 @@ export const approveRenewal = async (loanId: string, newDueDate: Date) => {
     include: { bookCopy: { include: { book: true } } },
   });
   if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
-  if (!loan.renewalRequested)
-    throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
+  // if (!loan.renewalRequested)
+  //   throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },
@@ -414,8 +414,8 @@ export const rejectRenewal = async (loanId: string) => {
     include: { bookCopy: { include: { book: true } } },
   });
   if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
-  if (!loan.renewalRequested)
-    throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
+  // if (!loan.renewalRequested)
+  //   throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },
