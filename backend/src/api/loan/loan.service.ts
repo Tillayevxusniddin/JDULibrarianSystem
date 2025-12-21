@@ -379,7 +379,7 @@ export const requestRenewal = async (loanId: string, userId: string) => {
 /**
  * Kutubxonachi muddatni uzaytirishni tasdiqlaydi
  */
-export const approveRenewal = async (loanId: string) => {
+export const approveRenewal = async (loanId: string, newDueDate: Date) => {
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
     include: { bookCopy: { include: { book: true } } },
@@ -387,9 +387,6 @@ export const approveRenewal = async (loanId: string) => {
   if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
   if (!loan.renewalRequested)
     throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
-
-  const newDueDate = new Date(loan.dueDate);
-  newDueDate.setDate(newDueDate.getDate() + 14);
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },

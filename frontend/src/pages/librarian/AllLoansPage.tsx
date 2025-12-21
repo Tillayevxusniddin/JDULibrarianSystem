@@ -22,6 +22,7 @@ import {
 import DownloadIcon from "@mui/icons-material/Download";
 import { responsiveTableSx } from "../../components/common/tableResponsive";
 import ConfirmationDialog from "../../components/common/ConfirmationDialog";
+import ExtendLoanDialog from "../../components/common/ExtendLoanDialog";
 import api from "../../api";
 import type { Loan, LoanStatus } from "../../types";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -59,6 +60,10 @@ const AllLoansPage: React.FC = () => {
     open: boolean;
     loanId: string | null;
   }>({ open: false, loanId: null });
+  const [extendDialog, setExtendDialog] = useState<{
+    open: boolean;
+    loan: Loan | null;
+  }>({ open: false, loan: null });
   const pendingReturnRef = useRef<{ loanId: string; toastId: string } | null>(null);
 
   const fetchLoans = useCallback(async () => {
@@ -179,6 +184,27 @@ const AllLoansPage: React.FC = () => {
 
   const handleCancelReturn = () => {
     setConfirmDialog({ open: false, loanId: null });
+  };
+
+  const handleExtendClick = (loan: Loan) => {
+    setExtendDialog({ open: true, loan });
+  };
+
+  const handleConfirmExtend = async (newDueDate: string) => {
+    const loan = extendDialog.loan;
+    setExtendDialog({ open: false, loan: null });
+
+    if (!loan) return;
+
+    await handleAction(
+      () =>
+        api.post(`/loans/${loan.id}/approve-renewal`, { newDueDate }),
+      "Ijara muddati muvaffaqiyatli uzaytirildi!"
+    );
+  };
+
+  const handleCancelExtend = () => {
+    setExtendDialog({ open: false, loan: null });
   };
 
   if (loading)
@@ -385,13 +411,7 @@ const AllLoansPage: React.FC = () => {
                             >
                               <Button
                                 color="success"
-                                onClick={() =>
-                                  handleAction(
-                                    () =>
-                                      api.post(`/loans/${loan.id}/approve-renewal`),
-                                    "So`rov tasdiqlandi!"
-                                  )
-                                }
+                                onClick={() => handleExtendClick(loan)}
                               >
                                 <CheckCircleIcon fontSize="small" />
                               </Button>
@@ -438,6 +458,14 @@ const AllLoansPage: React.FC = () => {
         confirmText="Qaytarish"
         cancelText="Bekor qilish"
         confirmColor="success"
+      />
+
+      <ExtendLoanDialog
+        open={extendDialog.open}
+        currentDueDate={extendDialog.loan?.dueDate || ""}
+        bookTitle={extendDialog.loan?.bookCopy.book.title}
+        onConfirm={handleConfirmExtend}
+        onCancel={handleCancelExtend}
       />
     </Box>
   );

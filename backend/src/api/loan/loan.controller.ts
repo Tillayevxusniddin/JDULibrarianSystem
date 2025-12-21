@@ -90,7 +90,8 @@ export const requestRenewalHandler = asyncHandler(
 export const approveRenewalHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.validatedData!.params;
-    const loan = await loanService.approveRenewal(id);
+    const { newDueDate } = req.validatedData!.body;
+    const loan = await loanService.approveRenewal(id, newDueDate);
     res
       .status(200)
       .json({ message: 'Loan period has been successfully extended.', loan });

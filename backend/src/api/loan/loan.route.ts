@@ -9,6 +9,7 @@ import {
   loanActionSchema,
   getAllLoansSchema,
   getMyLoansSchema,
+  approveRenewalSchema,
 } from './loan.validation.js';
 import * as loanController from './loan.controller.js';
 
@@ -77,7 +78,7 @@ router.post(
   '/:id/approve-renewal',
   authenticate,
   authorize(['LIBRARIAN']),
-  validate(loanActionSchema),
+  validate(approveRenewalSchema),
   loanController.approveRenewalHandler,
 );
 
