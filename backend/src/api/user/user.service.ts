@@ -190,7 +190,8 @@ export const deleteUser = async (id: string) => {
     await tx.notification.deleteMany({ where: { userId: id } });
     await tx.fine.deleteMany({ where: { userId: id } });
     await tx.bookComment.deleteMany({ where: { userId: id } });
-    await tx.reservation.deleteMany({ where: { userId: id } });
+    // COMMENTED OUT - Reservation feature disabled
+    // await tx.reservation.deleteMany({ where: { userId: id } });
     await tx.loan.deleteMany({ where: { userId: id } });
     await tx.bookSuggestion.deleteMany({ where: { userId: id } });
 

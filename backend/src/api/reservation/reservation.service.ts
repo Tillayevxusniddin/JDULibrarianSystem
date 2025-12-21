@@ -1,12 +1,12 @@
+// COMMENTED OUT - Reservation feature disabled
+/*
 import prisma from '../../config/db.config.js';
 import ApiError from '../../utils/ApiError.js';
 import redisClient from '../../config/redis.config.js';
 import { getIo } from '../../utils/socket.js';
 import { NotificationType } from '@prisma/client';
 
-/**
- * Rezervatsiyani bajaradi (foydalanuvchi kitobni olib ketganda).
- */
+// Rezervatsiyani bajaradi (foydalanuvchi kitobni olib ketganda).
 export const fulfillReservation = async (reservationId: string) => {
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findUnique({
@@ -49,9 +49,7 @@ export const fulfillReservation = async (reservationId: string) => {
   });
 };
 
-/**
- * Barcha aktiv rezervatsiyalar ro'yxatini oladi
- */
+// Barcha aktiv rezervatsiyalar ro'yxatini oladi
 export const findAllReservations = async () => {
   return prisma.reservation.findMany({
     where: {
@@ -65,9 +63,7 @@ export const findAllReservations = async () => {
   });
 };
 
-/**
- * Foydalanuvchining aktiv rezervatsiyalarini oladi
- */
+// Foydalanuvchining aktiv rezervatsiyalarini oladi
 export const findUserReservations = (userId: string) => {
   return prisma.reservation.findMany({
     where: { userId, status: { notIn: ['FULFILLED', 'EXPIRED', 'CANCELLED'] } },
@@ -76,9 +72,7 @@ export const findUserReservations = (userId: string) => {
   });
 };
 
-/**
- * Rezervatsiyani bekor qilish
- */
+// Rezervatsiyani bekor qilish
 export const cancelReservation = async (
   reservationId: string,
   requestorId: string,
@@ -131,3 +125,4 @@ export const cancelReservation = async (
     }
   });
 };
+*/

@@ -112,11 +112,15 @@ router.get(
   validate(commentIdParamSchema),
   bookController.getCommentsByBookIdHandler,
 );
+
+// COMMENTED OUT - Reservation feature disabled
+/*
 router.post(
   '/:id/reserve',
   authenticate,
   validate(bookIdParamSchema),
   bookController.reserveBookHandler,
 );
+*/
 
 export default router;
