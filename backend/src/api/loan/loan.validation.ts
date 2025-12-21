@@ -36,3 +36,20 @@ export const loanActionSchema = z.object({
       .uuid({ message: "Ijara IDsi to'g'ri formatda bo'lishi kerak" }),
   }),
 });
+
+// POST /loans/:id/approve-renewal
+export const approveRenewalSchema = z.object({
+  params: z.object({
+    id: z
+      .string()
+      .uuid({ message: "Ijara IDsi to'g'ri formatda bo'lishi kerak" }),
+  }),
+  body: z.object({
+    newDueDate: z
+      .string()
+      .refine((val) => !isNaN(Date.parse(val)), {
+        message: "Yangi muddat to'g'ri formatda bo'lishi kerak",
+      })
+      .transform((val) => new Date(val)),
+  }),
+});

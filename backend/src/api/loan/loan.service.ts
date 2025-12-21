@@ -100,12 +100,154 @@ export const createLoan = async (barcode: string, userId: string) => {
   });
 };
 /**
+ * Lazily refresh loan and reservation statuses.
+ *
+ * - Marks `ACTIVE` loans as `OVERDUE` when `dueDate` < now.
+ * - Expires reservations in `AWAITING_PICKUP` whose `expiresAt` < now,
+ *   then either assigns the copy to the next person in queue or makes the copy available.
+ *
+ * This is intentionally idempotent and throttled with Redis so it can safely be
+ * run on user requests (e.g., when someone opens their loans page) instead of
+ * via a cron job.
+ */
+export const lazyRefreshLoanStatuses = async (userId?: string) => {
+  const LOCK_KEY = userId ? `lazy-refresh:loans:user:${userId}` : 'lazy-refresh:loans:global';
+  // short-lived lock to avoid running concurrently / too often
+  let lockAcquired = false;
+  try {
+    const res = await redisClient.set(LOCK_KEY, '1', { NX: true, EX: 30 });
+    // Node Redis returns 'OK' when the key was set, or null when not set (lock already held)
+    if (!res) {
+      // someone else holds the lock; skip this refresh
+      return;
+    }
+    lockAcquired = true;
+  } catch (err) {
+    // Redis is unavailable or errored while acquiring the lock.
+    // Proceed with a best-effort refresh rather than failing the request.
+    // Note: without a lock there is a risk of concurrent refreshes, but that's acceptable
+    // for a best-effort lazy update triggered on user requests.
+    console.warn(
+      'Could not acquire Redis lock for lazy loan refresh; proceeding without lock.',
+      err,
+    );
+  }
+
+  try {
+    const now = new Date();
+
+    // 1) Mark active loans as OVERDUE if past due date
+    const overdueWhere: Prisma.LoanWhereInput = {
+      status: 'ACTIVE',
+      dueDate: { lt: now },
+    };
+    if (userId) (overdueWhere as any).userId = userId;
+
+    await prisma.loan.updateMany({
+      where: overdueWhere,
+      data: { status: 'OVERDUE' },
+    });
+
+    // 2) Process reservations that awaited pickup and have expired
+    // Cap how many expired reservations we handle in a single request to avoid
+    // long-running responses when the system has many expirations to process.
+    const PROCESS_LIMIT = 20;
+    const expiredWhere: any = {
+      status: ReservationStatus.AWAITING_PICKUP,
+      expiresAt: { lt: now },
+    };
+    if (userId) expiredWhere.userId = userId;
+
+    const expiredReservations = await prisma.reservation.findMany({
+      where: expiredWhere,
+      include: { book: true },
+      orderBy: { expiresAt: 'asc' }, // handle oldest expirations first
+      take: PROCESS_LIMIT,
+    });
+
+    for (const reservation of expiredReservations) {
+      // Handle each expired reservation in its own transaction so we can safely
+      // assign the copy to the next user or mark it available.
+      await prisma.$transaction(async (tx) => {
+        const fresh = await tx.reservation.findUnique({ where: { id: reservation.id } });
+        if (!fresh || fresh.status !== ReservationStatus.AWAITING_PICKUP || !fresh.assignedCopyId) return;
+
+        // Cancel this expired reservation and clear assignment
+        await tx.reservation.update({
+          where: { id: fresh.id },
+          data: { status: 'CANCELLED', assignedCopyId: null, expiresAt: null },
+        });
+
+        // Find next in queue (if any)
+        const nextInQueue = await tx.reservation.findFirst({
+          where: { bookId: fresh.bookId, status: 'ACTIVE' },
+          orderBy: { reservedAt: 'asc' },
+          include: { book: true },
+        });
+
+        if (nextInQueue) {
+          const expiresAt = new Date();
+          expiresAt.setHours(expiresAt.getHours() + 48);
+          await tx.reservation.update({
+            where: { id: nextInQueue.id },
+            data: {
+              status: ReservationStatus.AWAITING_PICKUP,
+              assignedCopyId: fresh.assignedCopyId,
+              expiresAt,
+            },
+          });
+
+          await tx.bookCopy.update({
+            where: { id: fresh.assignedCopyId },
+            data: { status: BookCopyStatus.MAINTENANCE },
+          });
+
+          const newNotification = await tx.notification.create({
+            data: {
+              userId: nextInQueue.userId,
+              message: `Siz navbatda turgan "${nextInQueue.book.title}" kitobi bo'shadi! Uni 48 soat ichida olib keting.`,
+              type: 'RESERVATION_AVAILABLE',
+            },
+          });
+
+          getIo().to(nextInQueue.userId).emit('new_notification', newNotification);
+        } else {
+          // No one waiting — make the copy available
+          await tx.bookCopy.update({
+            where: { id: fresh.assignedCopyId },
+            data: { status: BookCopyStatus.AVAILABLE },
+          });
+        }
+      });
+
+      // Invalidate Redis cache for the affected book so subsequent reads reflect the updated copy status
+      await redisClient.del(`book:${reservation.bookId}`);
+    }
+  } catch (err) {
+    // Log but don't throw — this is a best-effort refresh to keep responses snappy.
+    console.error('lazyRefreshLoanStatuses error:', err);
+  } finally {
+    // If we actually acquired the lock, try to release it early (TTL will also clear it).
+    if (lockAcquired) {
+      try {
+        await redisClient.del(LOCK_KEY);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+};
+
+/**
  * Foydalanuvchining barcha ijralarini topadi.
  */
 export const findUserLoans = async (
   userId: string,
   statusFilter?: 'active' | 'history',
 ) => {
+  // Ensure the user's loan/reservation statuses are up-to-date when they open the page.
+  await lazyRefreshLoanStatuses(userId);
+
   const where: Prisma.LoanWhereInput = { userId };
 
   if (statusFilter === 'active') {
@@ -129,6 +271,9 @@ export const findUserLoans = async (
 export const findAllLoans = async (
   filter?: 'pending' | 'renewal' | 'active' | 'history',
 ) => {
+  // A global refresh before returning admin/librarian lists ensures data freshness.
+  await lazyRefreshLoanStatuses();
+
   const where: Prisma.LoanWhereInput = {};
 
   if (filter === 'pending') where.status = 'PENDING_RETURN';
@@ -379,21 +524,18 @@ export const requestRenewal = async (loanId: string, userId: string) => {
 /**
  * Kutubxonachi muddatni uzaytirishni tasdiqlaydi
  */
-export const approveRenewal = async (loanId: string) => {
+export const approveRenewal = async (loanId: string, newDueDate: Date) => {
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
     include: { bookCopy: { include: { book: true } } },
   });
   if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
-  if (!loan.renewalRequested)
-    throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
-
-  const newDueDate = new Date(loan.dueDate);
-  newDueDate.setDate(newDueDate.getDate() + 14);
+  // if (!loan.renewalRequested)
+  //   throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },
-    data: { dueDate: newDueDate, renewalRequested: false },
+    data: { dueDate: newDueDate, renewalRequested: false, status: 'ACTIVE' },
   });
 
   const newNotification = await prisma.notification.create({
@@ -417,8 +559,8 @@ export const rejectRenewal = async (loanId: string) => {
     include: { bookCopy: { include: { book: true } } },
   });
   if (!loan) throw new ApiError(404, 'Ijara topilmadi.');
-  if (!loan.renewalRequested)
-    throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
+  // if (!loan.renewalRequested)
+  //   throw new ApiError(400, "Bu ijara uchun muddat uzaytirish so'ralmagan.");
 
   const updatedLoan = await prisma.loan.update({
     where: { id: loanId },

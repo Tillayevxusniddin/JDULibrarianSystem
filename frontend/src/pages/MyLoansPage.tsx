@@ -38,27 +38,29 @@ const MyLoansPage: React.FC = () => {
     fetchLoans();
   }, [fetchLoans]);
 
-  const handleRenewalRequest = async (loanId: string) => {
-    try {
-      await api.post(`/loans/${loanId}/renew`);
-      toast.success('Muddatni uzaytirish so`rovi yuborildi!');
-      fetchLoans();
-    } catch (error: any) {
-      const message = error.response?.data?.message || "So'rov yuborishda xatolik yuz berdi.";
-      toast.error(message);
-    }
-  };
+  // Renewal request functionality disabled - librarian controls extensions
+  // const handleRenewalRequest = async (loanId: string) => {
+  //   try {
+  //     await api.post(`/loans/${loanId}/renew`);
+  //     toast.success('Muddatni uzaytirish so`rovi yuborildi!');
+  //     fetchLoans();
+  //   } catch (error: any) {
+  //     const message = error.response?.data?.message || "So'rov yuborishda xatolik yuz berdi.";
+  //     toast.error(message);
+  //   }
+  // };
 
-  const handleInitiateReturn = async (loanId: string) => {
-    try {
-      await api.post(`/loans/${loanId}/return`);
-      toast.success('Kitobni qaytarish so`rovi yuborildi! Kutubxonachi tasdiqlaganda kitob qaytariladi.');
-      fetchLoans();
-    } catch (error: any) {
-      const message = error.response?.data?.message || "So'rov yuborishda xatolik yuz berdi.";
-      toast.error(message);
-    }
-  };
+  // Return functionality disabled - librarian controls all loan actions
+  // const handleInitiateReturn = async (loanId: string) => {
+  //   try {
+  //     await api.post(`/loans/${loanId}/return`);
+  //     toast.success('Kitobni qaytarish so`rovi yuborildi! Kutubxonachi tasdiqlaganda kitob qaytariladi.');
+  //     fetchLoans();
+  //   } catch (error: any) {
+  //     const message = error.response?.data?.message || "So'rov yuborishda xatolik yuz berdi.";
+  //     toast.error(message);
+  //   }
+  // };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error">{error}</Alert>;
@@ -106,16 +108,9 @@ const MyLoansPage: React.FC = () => {
                     <TableCell data-label="Qaytarish Muddati">{new Date(loan.dueDate).toLocaleDateString()}</TableCell>
                     <TableCell data-label="Statusi">{getStatusChip(loan.status)}</TableCell>
                     <TableCell data-label="Harakatlar" align="right">
-                      {loan.status === 'ACTIVE' && (
+                      {/* All student actions disabled - librarian controls extensions and returns */}
+                      {/* {loan.status === 'ACTIVE' && (
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                          <Button 
-                            size="small" 
-                            variant="outlined"
-                            onClick={() => handleRenewalRequest(loan.id)}
-                            disabled={loan.renewalRequested}
-                          >
-                            {loan.renewalRequested ? 'So`rov Yuborilgan' : 'Muddatni Uzaytirish'}
-                          </Button>
                           <Button 
                             size="small" 
                             variant="contained"
@@ -125,7 +120,7 @@ const MyLoansPage: React.FC = () => {
                             Qaytarish
                           </Button>
                         </Box>
-                      )}
+                      )} */}
                       {loan.status === 'PENDING_RETURN' && (
                         <Chip label="Qaytarish Kutilmoqda" color="warning" size="small" />
                       )}
