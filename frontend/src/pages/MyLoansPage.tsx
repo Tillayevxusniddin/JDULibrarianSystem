@@ -38,16 +38,17 @@ const MyLoansPage: React.FC = () => {
     fetchLoans();
   }, [fetchLoans]);
 
-  const handleRenewalRequest = async (loanId: string) => {
-    try {
-      await api.post(`/loans/${loanId}/renew`);
-      toast.success('Muddatni uzaytirish so`rovi yuborildi!');
-      fetchLoans();
-    } catch (error: any) {
-      const message = error.response?.data?.message || "So'rov yuborishda xatolik yuz berdi.";
-      toast.error(message);
-    }
-  };
+  // Renewal request functionality disabled - librarian controls extensions
+  // const handleRenewalRequest = async (loanId: string) => {
+  //   try {
+  //     await api.post(`/loans/${loanId}/renew`);
+  //     toast.success('Muddatni uzaytirish so`rovi yuborildi!');
+  //     fetchLoans();
+  //   } catch (error: any) {
+  //     const message = error.response?.data?.message || "So'rov yuborishda xatolik yuz berdi.";
+  //     toast.error(message);
+  //   }
+  // };
 
   const handleInitiateReturn = async (loanId: string) => {
     try {
@@ -108,14 +109,15 @@ const MyLoansPage: React.FC = () => {
                     <TableCell data-label="Harakatlar" align="right">
                       {loan.status === 'ACTIVE' && (
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                          <Button 
+                          {/* Renewal request button removed - librarian controls extensions */}
+                          {/* <Button 
                             size="small" 
                             variant="outlined"
                             onClick={() => handleRenewalRequest(loan.id)}
                             disabled={loan.renewalRequested}
                           >
                             {loan.renewalRequested ? 'So`rov Yuborilgan' : 'Muddatni Uzaytirish'}
-                          </Button>
+                          </Button> */}
                           <Button 
                             size="small" 
                             variant="contained"
