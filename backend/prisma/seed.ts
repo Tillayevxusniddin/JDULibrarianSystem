@@ -120,6 +120,18 @@ async function main() {
     user3.email,
   ]);
 
+  // Library Settings (singleton)
+  await prisma.librarySettings.upsert({
+    where: { id: 'default-settings' },
+    update: {},
+    create: {
+      id: 'default-settings',
+      enableFines: true,
+      fineAmountPerDay: new Prisma.Decimal(5000),
+    },
+  });
+  console.log('Library settings initialized.');
+
   // Blog/Channel setup
   const [libChannel, userChannel] = await Promise.all([
     prisma.channel.upsert({

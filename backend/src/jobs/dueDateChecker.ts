@@ -2,7 +2,6 @@ import cron from 'node-cron';
 import prisma from '../config/db.config.js';
 import { LoanStatus, NotificationType } from '@prisma/client';
 import { getIo } from '../utils/socket.js';
-import { FINE_AMOUNT } from '../config/constants.js'; // <-- KONSTANTA IMPORT QILINDI
 
 export const startDueDateChecker = () => {
   console.log('🗓️ Due date checker cron job enabled.');
@@ -10,6 +9,11 @@ export const startDueDateChecker = () => {
   cron.schedule('0 1 * * *', async () => {
     console.log('⏳ Checking for overdue and upcoming due loans...');
     const io = getIo();
+
+    // Fetch library settings
+    const settings = await prisma.librarySettings.findFirst();
+    const enableFines = settings?.enableFines ?? true;
+    const fineAmount = settings?.fineAmountPerDay ?? 5000;
 
     const today_start = new Date();
     today_start.setHours(0, 0, 0, 0);
@@ -82,12 +86,12 @@ export const startDueDateChecker = () => {
           where: { loanId: loan.id },
         });
 
-        if (!existingFine) {
+        if (!existingFine && enableFines) {
           // --- 3-TUZATISH: Kitob nomiga murojaat to'g'rilandi ---
           const reasonMessage = `"${loan.bookCopy.book.title}" kitobini o'z vaqtida qaytarmaganlik uchun.`;
           await tx.fine.create({
             data: {
-              amount: FINE_AMOUNT, // <-- KONSTANTA ISHLATILDI
+              amount: fineAmount,
               reason: reasonMessage,
               loanId: loan.id,
               userId: loan.userId,

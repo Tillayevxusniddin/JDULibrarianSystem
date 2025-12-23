@@ -311,3 +311,13 @@ model Notification {
 
   @@map("notifications")
 }
+
+model LibrarySettings {
+  id               String   @id @default(uuid())
+  enableFines      Boolean  @default(true)
+  fineAmountPerDay Decimal  @default(5000) @db.Decimal(10, 2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("library_settings")
+}
