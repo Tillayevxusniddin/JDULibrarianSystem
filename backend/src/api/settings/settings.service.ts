@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, FineIntervalUnit } from '@prisma/client';
 import prisma from '../../config/db.config.js';
 import ApiError from '../../utils/ApiError.js';
 
@@ -13,6 +13,8 @@ export const getSettings = async () => {
       data: {
         enableFines: true,
         fineAmountPerDay: new Prisma.Decimal(5000),
+        fineIntervalUnit: FineIntervalUnit.DAILY,
+        fineIntervalDays: null,
       },
     });
   }
@@ -26,6 +28,8 @@ export const getSettings = async () => {
 export const updateSettings = async (data: {
   enableFines?: boolean;
   fineAmountPerDay?: number;
+  fineIntervalUnit?: FineIntervalUnit;
+  fineIntervalDays?: number | null;
 }) => {
   const settings = await getSettings();
   
@@ -40,6 +44,23 @@ export const updateSettings = async (data: {
       throw new ApiError(400, 'Jarima miqdori 0 dan katta bo\'lishi kerak.');
     }
     updateData.fineAmountPerDay = new Prisma.Decimal(data.fineAmountPerDay);
+  }
+
+  if (data.fineIntervalUnit !== undefined) {
+    updateData.fineIntervalUnit = data.fineIntervalUnit;
+  }
+
+  if (data.fineIntervalDays !== undefined) {
+    // Validate that fineIntervalDays is provided when unit is CUSTOM
+    if (data.fineIntervalUnit === FineIntervalUnit.CUSTOM || settings.fineIntervalUnit === FineIntervalUnit.CUSTOM) {
+      if (data.fineIntervalDays === null || data.fineIntervalDays === undefined) {
+        throw new ApiError(400, 'CUSTOM interval uchun fineIntervalDays kiritilishi shart.');
+      }
+      if (data.fineIntervalDays <= 0) {
+        throw new ApiError(400, 'Interval kunlari 0 dan katta bo\'lishi kerak.');
+      }
+    }
+    updateData.fineIntervalDays = data.fineIntervalDays;
   }
   
   return prisma.librarySettings.update({

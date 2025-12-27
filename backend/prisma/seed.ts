@@ -128,6 +128,8 @@ async function main() {
       id: 'default-settings',
       enableFines: true,
       fineAmountPerDay: new Prisma.Decimal(5000),
+      fineIntervalUnit: 'DAILY',
+      fineIntervalDays: null,
     },
   });
   console.log('Library settings initialized.');
