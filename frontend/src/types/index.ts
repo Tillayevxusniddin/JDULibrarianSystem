@@ -6,7 +6,9 @@ export type NotificationType =
   | 'INFO'
   | 'WARNING'
   | 'FINE'
-  | 'RESERVATION_AVAILABLE';
+  | 'RESERVATION_AVAILABLE'; // COMMENTED OUT but kept for existing notification data
+
+// COMMENTED OUT - Reservation feature disabled (kept for compatibility)
 export type ReservationStatus =
   | 'ACTIVE'
   | 'AWAITING_PICKUP'
@@ -159,6 +161,7 @@ export interface Notification {
   createdAt: string;
 }
 
+// COMMENTED OUT - Reservation feature disabled (kept for compatibility)
 // --- O'ZGARTIRILDI ---
 // Reservation'ga nusxa tayinlanganini bilish uchun maydon qo'shildi
 export interface Reservation {

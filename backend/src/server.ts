@@ -13,7 +13,8 @@ import passport from './config/passport.config.js';
 
 // === Jobs ===
 import { startDueDateChecker } from './jobs/dueDateChecker.js';
-import { startReservationChecker } from './jobs/reservationChecker.js';
+// COMMENTED OUT - Reservation feature disabled
+// import { startReservationChecker } from './jobs/reservationChecker.js';
 
 // === Middlewares ===
 import errorMiddleware from './middlewares/error.middleware.js';
@@ -27,7 +28,8 @@ import suggestionRouter from './api/suggestion/suggestion.route.js';
 import notificationRouter from './api/notification/notification.route.js';
 import fineRouter from './api/fine/fine.route.js';
 import userRouter from './api/user/user.route.js';
-import reservationRouter from './api/reservation/reservation.route.js';
+// COMMENTED OUT - Reservation feature disabled
+// import reservationRouter from './api/reservation/reservation.route.js';
 import dashboardRouter from './api/dashboard/dashboard.route.js';
 import channelRouter from './api/channel/channel.route.js';
 import postRouter from './api/post/post.route.js';
@@ -68,7 +70,8 @@ app.use('/api/v1/suggestions', suggestionRouter);
 app.use('/api/v1/notifications', notificationRouter);
 app.use('/api/v1/fines', fineRouter);
 app.use('/api/v1/users', userRouter);
-app.use('/api/v1/reservations', reservationRouter);
+// COMMENTED OUT - Reservation feature disabled
+// app.use('/api/v1/reservations', reservationRouter);
 app.use('/api/v1/channels', channelRouter);
 app.use('/api/v1/posts', postRouter);
 app.use('/api/v1/comments', commentRouter);
@@ -166,7 +169,8 @@ const PORT: number = parseInt(process.env.PORT || '5000', 10);
 
 if (process.env.NODE_ENV !== 'test') {
   startDueDateChecker();
-  startReservationChecker();
+  // COMMENTED OUT - Reservation feature disabled
+  // startReservationChecker();
   server.listen(PORT, () => {
     console.log(`🚀 Server started at http://localhost:${PORT}...`);
   });

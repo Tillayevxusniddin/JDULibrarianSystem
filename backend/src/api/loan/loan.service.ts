@@ -54,8 +54,10 @@ export const createLoan = async (barcode: string, userId: string) => {
       throw new ApiError(400, "Bu nusxa yo'qolgan deb belgilangan.");
     }
 
+    // COMMENTED OUT - Reservation feature disabled
     // Agar nusxa 'AVAILABLE' bo'lmasa, demak u 'MAINTENANCE' (rezervdagi) holatida.
     // U aynan shu foydalanuvchi uchun band qilinganini tekshiramiz.
+    /*
     if (bookCopy.status === BookCopyStatus.MAINTENANCE) {
       const reservation = await tx.reservation.findFirst({
         where: {
@@ -76,6 +78,7 @@ export const createLoan = async (barcode: string, userId: string) => {
         data: { status: ReservationStatus.FULFILLED },
       });
     }
+    */
 
     // 4. Barcha tekshiruvlardan so'ng, nusxaning statusini 'BORROWED'ga o'zgartiramiz.
     // BU YERDA XATO BO'LMASLIGI SHART!
@@ -354,6 +357,9 @@ export const confirmReturn = async (loanId: string) => {
 
     const bookId = loan.bookCopy.bookId;
 
+    // COMMENTED OUT - Reservation feature disabled
+    // Check if there's a reservation queue and assign book to next person
+    /*
     const nextInQueue = await tx.reservation.findFirst({
       where: { bookId, status: 'ACTIVE' },
       orderBy: { reservedAt: 'asc' },
@@ -392,6 +398,13 @@ export const confirmReturn = async (loanId: string) => {
         data: { status: BookCopyStatus.AVAILABLE },
       });
     }
+    */
+
+    // Without reservation feature, just make the book available
+    await tx.bookCopy.update({
+      where: { id: loan.bookCopyId },
+      data: { status: BookCopyStatus.AVAILABLE },
+    });
 
     return tx.loan.update({
       where: { id: loanId },
@@ -425,6 +438,9 @@ export const directReturn = async (loanId: string) => {
 
     const bookId = loan.bookCopy.bookId;
 
+    // COMMENTED OUT - Reservation feature disabled
+    // Check if there's a reservation queue and assign book to next person
+    /*
     const nextInQueue = await tx.reservation.findFirst({
       where: { bookId, status: 'ACTIVE' },
       orderBy: { reservedAt: 'asc' },
@@ -463,6 +479,13 @@ export const directReturn = async (loanId: string) => {
         data: { status: BookCopyStatus.AVAILABLE },
       });
     }
+    */
+
+    // Without reservation feature, just make the book available
+    await tx.bookCopy.update({
+      where: { id: loan.bookCopyId },
+      data: { status: BookCopyStatus.AVAILABLE },
+    });
 
     return tx.loan.update({
       where: { id: loanId },

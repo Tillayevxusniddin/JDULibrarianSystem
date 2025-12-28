@@ -17,8 +17,9 @@ import CategoriesPage from '../pages/librarian/CategoriesPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import AllLoansPage from '../pages/librarian/AllLoansPage';
 import ProfilePage from '../pages/ProfilePage'; 
-import MyReservationsPage from '../pages/MyReservationsPage';
-import ReservationsPage from '../pages/librarian/ReservationsPage'; 
+// COMMENTED OUT - Reservation feature disabled
+// import MyReservationsPage from '../pages/MyReservationsPage';
+// import ReservationsPage from '../pages/librarian/ReservationsPage'; 
 import MyFinesPage from '../pages/MyFinesPage';
 import ManualFinesPage from '../pages/librarian/ManualFinesPage';
 import ManagerPage from '../pages/manager/ManagerPage';
@@ -106,11 +107,14 @@ const router = createBrowserRouter([
         path: '/suggest-book',
         element: <SuggestBookPage />,
       },
+      // COMMENTED OUT - Reservation feature disabled
+      /*
       {
         path: '/all-reservations', // <-- YANGI YO'L
         element: <LibrarianRoute />,
         children: [{ path: '', element: <ReservationsPage /> }],
       },
+      */
       {
         path: '/manual-fines',
         element: <LibrarianRoute />,
@@ -140,9 +144,12 @@ const router = createBrowserRouter([
         element: <ManagerRoute />, 
         children: [{ path: '', element: <ManagerPage /> }],
       },
+      // COMMENTED OUT - Reservation feature disabled
+      /*
       { path: '/my-reservations', element: <MyReservationsPage /> 
 
       },
+      */
       // COMMENTED OUT - Channels feature not ready for release
       // {
       //   path: '/my-channel',

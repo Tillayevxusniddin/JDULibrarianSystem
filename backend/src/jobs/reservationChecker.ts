@@ -1,3 +1,5 @@
+// COMMENTED OUT - Reservation feature disabled
+/*
 import cron from 'node-cron';
 import prisma from '../config/db.config.js';
 import {
@@ -103,3 +105,4 @@ export const startReservationChecker = () => {
     }
   });
 };
+*/

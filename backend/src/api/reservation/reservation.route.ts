@@ -1,3 +1,5 @@
+// COMMENTED OUT - Reservation feature disabled
+/*
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import validate from '../../middlewares/validate.middleware.js';
@@ -34,3 +36,4 @@ router.delete(
 );
 
 export default router;
+*/
