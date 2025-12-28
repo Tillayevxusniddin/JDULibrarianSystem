@@ -119,6 +119,8 @@ export const getCommentsByBookIdHandler = asyncHandler(
   },
 );
 
+// COMMENTED OUT - Reservation feature disabled
+/*
 export const reserveBookHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { id: bookId } = req.validatedData!.params;
@@ -130,6 +132,7 @@ export const reserveBookHandler = asyncHandler(
     });
   },
 );
+*/
 
 export const bulkCreateBooksHandler = asyncHandler(
   async (req: Request, res: Response) => {

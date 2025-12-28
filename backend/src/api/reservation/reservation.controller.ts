@@ -1,3 +1,5 @@
+// COMMENTED OUT - Reservation feature disabled
+/*
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import * as reservationService from './reservation.service.js';
@@ -39,3 +41,4 @@ export const cancelReservationHandler = asyncHandler(
     res.status(204).send();
   },
 );
+*/

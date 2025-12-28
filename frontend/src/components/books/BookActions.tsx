@@ -107,6 +107,8 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
     }
   };
 
+  // COMMENTED OUT - Reservation feature disabled
+  /*
   const handleReserve = () =>
     handleAction(
       () => api.post(`/books/${book.id}/reserve`),
@@ -114,6 +116,7 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
       "Kitobni band qilishda xatolik yuz berdi.",
       true
     );
+  */
   const handleReturn = () =>
     userLoan &&
     handleAction(
@@ -177,6 +180,8 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
         </Button>
       )}
 
+      {/* COMMENTED OUT - Reservation feature disabled */}
+      {/*
       {user.role === "USER" && !userLoan && (
         <Button
           variant="contained"
@@ -197,6 +202,7 @@ const BookActions: React.FC<BookActionsProps> = ({ book, onActionSuccess }) => {
           Band Qilish
         </Button>
       )}
+      */}
 
       {user.role === "USER" && userLoan && (
         <Button
