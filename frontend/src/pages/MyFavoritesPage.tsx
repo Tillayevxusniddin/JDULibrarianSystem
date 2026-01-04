@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, CircularProgress, Alert, Grid } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import api from '../api';
 import type { Favorite } from '../types';
 import BookCard from '../components/books/BookCard';
@@ -74,29 +74,39 @@ const MyFavoritesPage: React.FC = () => {
           </Typography>
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)',
+            },
+            gap: 3,
+          }}
+        >
           <AnimatePresence mode="popLayout">
             {favorites.map((favorite) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={favorite.id}>
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <BookCard
-                    book={favorite.book}
-                    onEdit={undefined}
-                    onDelete={undefined}
-                    onRemoveFavorite={() => handleRemoveFavorite(favorite.bookId)}
-                    isFavorited={true}
-                  />
-                </motion.div>
-              </Grid>
+              <motion.div
+                key={favorite.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+              >
+                <BookCard
+                  book={favorite.book}
+                  onEdit={undefined}
+                  onDelete={undefined}
+                  onRemoveFavorite={() => handleRemoveFavorite(favorite.bookId)}
+                  isFavorited={true}
+                />
+              </motion.div>
             ))}
           </AnimatePresence>
-        </Grid>
+        </Box>
       )}
     </Box>
   );

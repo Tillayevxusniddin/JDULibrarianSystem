@@ -54,7 +54,7 @@ const BooksPage: React.FC = () => {
       if (user?.role === 'USER') {
         try {
           const favResponse = await api.get('/favorites');
-          const favBookIds = new Set(favResponse.data.map((fav: any) => fav.bookId));
+          const favBookIds = new Set<string>(favResponse.data.map((fav: any) => fav.bookId));
           setFavorites(favBookIds);
         } catch (err) {
           console.error('Failed to fetch favorites:', err);
