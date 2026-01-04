@@ -10,6 +10,8 @@ import LibrarianRoute from './LibrarianRoute';
 import ManagerRoute from './ManagerRoute';
 import UsersPage from '../pages/librarian/UsersPage';
 import MyLoansPage from '../pages/MyLoansPage';
+import MyRentalHistoryPage from '../pages/MyRentalHistoryPage';
+import MyFavoritesPage from '../pages/MyFavoritesPage';
 import FinesPage from '../pages/librarian/FinesPage';
 import SuggestionsPage from '../pages/librarian/SuggestionsPage';
 import SuggestBookPage from '../pages/SuggestBookPage';
@@ -97,6 +99,14 @@ const router = createBrowserRouter([
       {
         path: '/my-loans',
         element: <MyLoansPage />,
+      },
+      {
+        path: '/my-rental-history',
+        element: <MyRentalHistoryPage />,
+      },
+      {
+        path: '/my-favorites',
+        element: <MyFavoritesPage />,
       },
       {
         path: '/notifications',

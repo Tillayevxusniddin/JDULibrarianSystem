@@ -29,6 +29,8 @@ const BooksPage: React.FC = () => {
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
 
   const [isBulkModalOpen, setBulkModalOpen] = useState(false);
+  
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const { user } = useAuthStore();
 
@@ -47,6 +49,17 @@ const BooksPage: React.FC = () => {
       });
       setBooks(response.data.data);
       setTotalPages(response.data.meta.totalPages);
+      
+      // Fetch favorites for USER role
+      if (user?.role === 'USER') {
+        try {
+          const favResponse = await api.get('/favorites');
+          const favBookIds = new Set<string>(favResponse.data.map((fav: any) => fav.bookId));
+          setFavorites(favBookIds);
+        } catch (err) {
+          console.error('Failed to fetch favorites:', err);
+        }
+      }
     } catch (err) {
       const errorMessage = 'Kitoblarni yuklashda xatolik yuz berdi.';
       setError(errorMessage);
@@ -54,7 +67,7 @@ const BooksPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, filters.search, filters.categoryId, filters.availability]);
+  }, [page, filters.search, filters.categoryId, filters.availability, user?.role]);
 
   useEffect(() => {
     fetchBooks();
@@ -92,6 +105,29 @@ const BooksPage: React.FC = () => {
       const errorMessage = error.response?.data?.message || "Kitobni o'chirishda noma'lum xatolik yuz berdi.";
       toast.error(errorMessage);
       setDeleteConfirmOpen(false);
+    }
+  };
+
+  const handleToggleFavorite = async (bookId: string) => {
+    try {
+      const isFavorited = favorites.has(bookId);
+      
+      if (isFavorited) {
+        await api.delete(`/favorites/${bookId}`);
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(bookId);
+          return newSet;
+        });
+        toast.success('Sevimlilardan olib tashlandi.');
+      } else {
+        await api.post('/favorites', { bookId });
+        setFavorites(prev => new Set(prev).add(bookId));
+        toast.success('Sevimlilarga qo\'shildi!');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Sevimlilarni yangilashda xatolik yuz berdi.";
+      toast.error(message);
     }
   };
 
@@ -145,8 +181,10 @@ const BooksPage: React.FC = () => {
               >
                 <BookCard
                   book={book}
-                  onEdit={handleOpenModal}
-                  onDelete={handleDeleteClick}
+                  onEdit={user?.role === 'LIBRARIAN' ? handleOpenModal : undefined}
+                  onDelete={user?.role === 'LIBRARIAN' ? handleDeleteClick : undefined}
+                  onToggleFavorite={user?.role === 'USER' ? handleToggleFavorite : undefined}
+                  isFavorited={favorites.has(book.id)}
                 />
               </motion.div>
             ))

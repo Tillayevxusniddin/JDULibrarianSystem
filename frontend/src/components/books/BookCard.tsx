@@ -7,15 +7,19 @@ import type { Book } from '../../types';
 import { Link } from 'react-router-dom';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-// --- 1-QADAM: useAuthStore'ni import qilamiz ---
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import { useAuthStore } from '../../store/auth.store';
 
 import defaultBookCover from '../../assets/default-book-cover.png';
 
 interface BookCardProps {
   book: Book;
-  onEdit: (book: Book) => void;
-  onDelete: (book: Book) => void;
+  onEdit?: (book: Book) => void;
+  onDelete?: (book: Book) => void;
+  onToggleFavorite?: (bookId: string) => void;
+  onRemoveFavorite?: () => void;
+  isFavorited?: boolean;
 }
 const getStatusChip = (availableCopies: number) => {
   if (availableCopies > 0) {
@@ -24,7 +28,14 @@ const getStatusChip = (availableCopies: number) => {
   return { label: 'BAND', color: 'error' as const };
 };
 
-const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
+const BookCard: React.FC<BookCardProps> = ({ 
+  book, 
+  onEdit, 
+  onDelete, 
+  onToggleFavorite, 
+  onRemoveFavorite,
+  isFavorited = false 
+}) => {
   // --- 2-QADAM: Foydalanuvchi ma'lumotini store'dan olamiz ---
   const { user } = useAuthStore();
   
@@ -126,7 +137,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
           </Box>
         </Link>
         
-        {user?.role === 'LIBRARIAN' && (
+        {user?.role === 'LIBRARIAN' && onEdit && onDelete && (
           <motion.div
             style={{ position: 'absolute', top: 8, left: 8 }}
             variants={{
@@ -139,6 +150,39 @@ const BookCard: React.FC<BookCardProps> = ({ book, onEdit, onDelete }) => {
               <IconButton onClick={() => onEdit(book)} sx={{ color: 'white' }}><EditIcon /></IconButton>
               <IconButton onClick={() => onDelete(book)} sx={{ color: '#ffcdd2' }}><DeleteIcon /></IconButton>
             </CardActions>
+          </motion.div>
+        )}
+
+        {user?.role === 'USER' && (onToggleFavorite || onRemoveFavorite) && (
+          <motion.div
+            style={{ position: 'absolute', top: 8, right: 8 }}
+            variants={{
+              rest: { opacity: 0, scale: 0.8 },
+              hover: { opacity: 1, scale: 1 }
+            }}
+            transition={{ duration: 0.3 }}
+          >
+            <IconButton
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onRemoveFavorite) {
+                  onRemoveFavorite();
+                } else if (onToggleFavorite) {
+                  onToggleFavorite(book.id);
+                }
+              }}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.9)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+              }}
+            >
+              {isFavorited ? (
+                <FavoriteIcon sx={{ color: 'error.main' }} />
+              ) : (
+                <FavoriteBorderIcon sx={{ color: 'text.secondary' }} />
+              )}
+            </IconButton>
           </motion.div>
         )}
       </Card>
