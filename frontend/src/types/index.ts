@@ -242,3 +242,11 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+export interface Favorite {
+  id: string;
+  userId: string;
+  bookId: string;
+  createdAt: string;
+  book: Book;
+}

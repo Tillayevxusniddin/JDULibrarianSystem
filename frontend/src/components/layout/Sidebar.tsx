@@ -16,6 +16,7 @@ import {
 // Ikonkalarni import qilish
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import BookIcon from "@mui/icons-material/Book";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import PeopleIcon from "@mui/icons-material/People";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import LightbulbIcon from "@mui/icons-material/Lightbulb";
@@ -27,6 +28,7 @@ import FactCheckIcon from "@mui/icons-material/FactCheck";
 import BookmarkAddedIcon from "@mui/icons-material/BookmarkAdded";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import BookmarksIcon from "@mui/icons-material/Bookmarks";
+import HistoryIcon from "@mui/icons-material/History";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import SchoolIcon from "@mui/icons-material/School";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
@@ -55,9 +57,21 @@ const navItems = [
     role: ["LIBRARIAN", "USER"],
   },
   {
+    text: "Mening Sevimlilarim",
+    icon: <FavoriteIcon />,
+    path: "/my-favorites",
+    role: ["USER"],
+  },
+  {
     text: "Mening Ijaralarim",
     icon: <AssignmentIcon />,
     path: "/my-loans",
+    role: ["USER"],
+  },
+  {
+    text: "Ijara Tarixi",
+    icon: <HistoryIcon />,
+    path: "/my-rental-history",
     role: ["USER"],
   },
   // COMMENTED OUT - Reservation feature disabled
