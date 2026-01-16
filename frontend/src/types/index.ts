@@ -57,7 +57,6 @@ export interface BookCopy {
     dueDate: string;
     user: {
       id: string;
-      studentId?: string;
       firstName: string;
       lastName: string;
       email: string;
