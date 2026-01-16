@@ -50,6 +50,18 @@ export interface BookCopy {
     title: string;
     coverImage?: string;
   };
+  // Active loan information (if borrowed)
+  loans?: Array<{
+    id: string;
+    borrowedAt: string;
+    dueDate: string;
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+  }>;
 }
 
 // --- O'ZGARTIRILDI ---
