@@ -143,6 +143,7 @@ export const findBookById = async (id: string) => {
               user: {
                 select: {
                   id: true,
+                  studentId: true,
                   firstName: true,
                   lastName: true,
                   email: true,
