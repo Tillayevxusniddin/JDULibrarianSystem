@@ -132,7 +132,28 @@ export const findBookById = async (id: string) => {
     where: { id },
     include: {
       category: true,
-      copies: { orderBy: { barcode: 'asc' } },
+      copies: {
+        orderBy: { barcode: 'asc' },
+        include: {
+          loans: {
+            where: {
+              status: { in: ['ACTIVE', 'OVERDUE'] },
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: { borrowedAt: 'desc' },
+            take: 1,
+          },
+        },
+      },
     },
   });
 

@@ -401,31 +401,55 @@ const BookDetailPage: React.FC = () => {
                         Shtrix-kod (Barcode)
                       </TableCell>
                       <TableCell sx={{ fontWeight: "bold" }}>Holati</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Ijaraga olgan
+                      </TableCell>
                       <TableCell align="right" sx={{ fontWeight: "bold" }}>
                         Harakatlar
                       </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {book.copies.map((copy) => (
-                      <TableRow key={copy.id} hover>
-                        <TableCell data-label="Shtrix-kod (Barcode)">
-                          {copy.barcode}
-                        </TableCell>
-                        <TableCell data-label="Holati">
-                          <Chip
-                            label={copy.status}
-                            color={getCopyStatusChipColor(copy.status)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell data-label="Harakatlar" align="right">
-                          <IconButton onClick={(e) => handleMenuClick(e, copy)}>
-                            <MoreVertIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {book.copies.map((copy) => {
+                      const activeLoan = copy.loans?.[0];
+                      const borrower = activeLoan?.user;
+                      
+                      return (
+                        <TableRow key={copy.id} hover>
+                          <TableCell data-label="Shtrix-kod (Barcode)">
+                            {copy.barcode}
+                          </TableCell>
+                          <TableCell data-label="Holati">
+                            <Chip
+                              label={copy.status}
+                              color={getCopyStatusChipColor(copy.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell data-label="Ijaraga olgan">
+                            {borrower ? (
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {borrower.firstName} {borrower.lastName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {borrower.email}
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                —
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell data-label="Harakatlar" align="right">
+                            <IconButton onClick={(e) => handleMenuClick(e, copy)}>
+                              <MoreVertIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
