@@ -60,7 +60,6 @@ enum ReservationStatus {
 
 model User {
   id             String     @id @default(uuid())
-  studentId      String?    @unique // Student ID number for students
   firstName      String
   lastName       String
   email          String     @unique

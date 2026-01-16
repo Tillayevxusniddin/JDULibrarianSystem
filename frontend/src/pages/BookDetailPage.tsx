@@ -430,7 +430,6 @@ const BookDetailPage: React.FC = () => {
                             {borrower ? (
                               <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {borrower.studentId ? `${borrower.studentId} ` : ''}
                                   {borrower.firstName} {borrower.lastName}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
