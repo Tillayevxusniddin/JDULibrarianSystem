@@ -475,7 +475,6 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
 
   // 3. Barcha shtrix-kodlarni yig'ib olish (dublikatlarni tekshirish uchun)
   const allBarcodesInFile = new Set<string>();
-  // const duplicateBarcodesInFile = new Set<string>(); // Copilot: Unused, removed
 
   // Validatsiya qilingan va guruhlangan ma'lumotlar
   // Key: Title + Author (normalized) -> Value: { title, author, category, barcodes: [] }
@@ -506,6 +505,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
       results.failedRows.push({
         row: originalRowIndex,
         data: row,
+        code: 'MISSING_DATA',
         reason: "Barcode, Title yoki Category yetishmayapti.",
       });
       continue;
@@ -513,10 +513,10 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
 
     // Fayl ichidagi dublikat barcode
     if (allBarcodesInFile.has(barcode)) {
-      // duplicateBarcodesInFile.add(barcode); // Removed
       results.failedRows.push({
         row: originalRowIndex,
         data: row,
+        code: 'DUPLICATE_BARCODE_FILE',
         reason: `Fayl ichida takrorlangan shtrix-kod: ${barcode}`,
       });
       continue;
@@ -541,6 +541,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
          results.failedRows.push({
           row: originalRowIndex,
           data: row,
+          code: 'CATEGORY_CONFLICT',
           reason: `Bir xil Title/Author ("${title}") uchun turli Category topildi: "${existing.category}" va "${category}".`,
         });
         continue;
@@ -568,6 +569,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
           results.failedRows.push({
              row: 'N/A', // Guruhlangan, aniq qatorni topish qiyinroq, lekin umumiy xato
              data: [bc, bookData.title],
+             code: 'DUPLICATE_BARCODE_DB',
              reason: `Shtrix-kod bazada allaqachon mavjud: ${bc}`
           });
         } else {
@@ -615,8 +617,11 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
         const searchCriteria: Prisma.BookWhereInput = {
           title: { equals: bookData.title, mode: 'insensitive' },
         };
+        // Copilot fix: Strict author matching. If author is missing, look for author: null
         if (bookData.author) {
             searchCriteria.author = { equals: bookData.author, mode: 'insensitive' };
+        } else {
+            searchCriteria.author = null;
         }
 
         const existingBook = await tx.book.findFirst({
@@ -658,6 +663,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
       results.failedRows.push({
         row: 'Group',
         data: [bookData.title, bookData.author],
+        code: 'SAVE_ERROR',
         reason: `Saqlashda xatolik: ${error.message}`,
       });
     }

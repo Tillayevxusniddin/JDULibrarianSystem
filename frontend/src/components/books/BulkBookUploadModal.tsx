@@ -45,14 +45,26 @@ interface UploadResult {
   failedRows: {
     row: number | string;
     data: unknown[]; // Copilot: Better typing than any[]
+    code?: string; // New field from backend
     reason: string;
   }[];
 }
 
-const getErrorType = (reason: string): string => {
-  if (reason.includes("Shtrix-kod bazada allaqachon mavjud")) return "Mavjud Shtrix-kodlar (Bazada)";
-  if (reason.includes("Fayl ichida takrorlangan")) return "Takrorlangan Shtrix-kodlar (Fayl ichida)";
-  if (reason.includes("Barcode, Title yoki Category")) return "Ma'lumotlar Yetishmovchiligi";
+const getErrorType = (row: { reason: string; code?: string }): string => {
+  if (row.code) {
+    switch (row.code) {
+      case 'MISSING_DATA': return "Ma'lumotlar Yetishmovchiligi";
+      case 'DUPLICATE_BARCODE_FILE': return "Takrorlangan Shtrix-kodlar (Fayl ichida)";
+      case 'DUPLICATE_BARCODE_DB': return "Mavjud Shtrix-kodlar (Bazada)";
+      case 'CATEGORY_CONFLICT': return "Kategoriya Ziddiyati";
+      case 'SAVE_ERROR': return "Saqlash Xatoligi";
+      default: return "Boshqa Xatoliklar";
+    }
+  }
+  // Fallback for older backend versions or unhandled codes
+  if (row.reason.includes("Shtrix-kod bazada allaqachon mavjud")) return "Mavjud Shtrix-kodlar (Bazada)";
+  if (row.reason.includes("Fayl ichida takrorlangan")) return "Takrorlangan Shtrix-kodlar (Fayl ichida)";
+  if (row.reason.includes("Barcode, Title yoki Category")) return "Ma'lumotlar Yetishmovchiligi";
   return "Boshqa Xatoliklar";
 };
 
@@ -70,7 +82,7 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
   const availableErrorTypes = useMemo(() => {
     if (!result) return [];
     const types = new Set<string>();
-    result.failedRows.forEach(row => types.add(getErrorType(row.reason)));
+    result.failedRows.forEach(row => types.add(getErrorType(row)));
     return Array.from(types);
   }, [result]);
 
@@ -150,7 +162,7 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
 
     // Filter rows
     const filteredRows = result.failedRows.filter(fail => 
-      selectedErrorTypes.has(getErrorType(fail.reason))
+      selectedErrorTypes.has(getErrorType(fail))
     );
 
     if (filteredRows.length === 0) {
@@ -168,6 +180,7 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
         'Title': (fail.data as any[])[1] || '',
         'Author': (fail.data as any[])[2] || '',
         'Category': (fail.data as any[])[3] || '',
+        'Error Code': fail.code || '',
         'Error Reason': fail.reason,
         'Original Row Number': fail.row,
         }));
