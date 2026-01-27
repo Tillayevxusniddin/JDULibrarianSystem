@@ -18,7 +18,7 @@ const fileFilter = (
     'application/x-csv',
     'text/comma-separated-values',
     'text/x-comma-separated-values',
-    'application/vnd.ms-excel', // Some systems report CSV as this
+    // 'application/vnd.ms-excel' removed (duplicate)
   ];
 
   // Also check file extension as a fallback because some clients send generic binary/octet-stream types

@@ -28,7 +28,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import InfoIcon from '@mui/icons-material/Info';
 import api from '../../api';
 import toast from 'react-hot-toast';
-import * as XLSX from 'xlsx';
+// import * as XLSX from 'xlsx'; // Copilot: Lazy loaded below
 
 interface BulkBookUploadModalProps {
   open: boolean;
@@ -44,7 +44,7 @@ interface UploadResult {
   };
   failedRows: {
     row: number | string;
-    data: any[];
+    data: unknown[]; // Copilot: Better typing than any[]
     reason: string;
   }[];
 }
@@ -145,7 +145,7 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!result || !result.failedRows.length) return;
 
     // Filter rows
@@ -158,31 +158,43 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
       return;
     }
 
-    // Prepare data for export
-    const exportData = filteredRows.map((fail) => ({
-      'Barcode': fail.data[0] || '',
-      'Title': fail.data[1] || '',
-      'Author': fail.data[2] || '',
-      'Category': fail.data[3] || '',
-      'Error Reason': fail.reason,
-      'Original Row Number': fail.row,
-    }));
+    try {
+        // Copilot: Lazy load xlsx
+        const XLSX = await import('xlsx');
 
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Failed Rows");
+        // Prepare data for export
+        const exportData = filteredRows.map((fail) => ({
+        'Barcode': (fail.data as any[])[0] || '',
+        'Title': (fail.data as any[])[1] || '',
+        'Author': (fail.data as any[])[2] || '',
+        'Category': (fail.data as any[])[3] || '',
+        'Error Reason': fail.reason,
+        'Original Row Number': fail.row,
+        }));
 
-    // Generate file name with timestamp
-    const date = new Date().toISOString().split('T')[0];
-    const fileName = `upload_errors_${date}.${downloadFormat}`;
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Failed Rows");
 
-    // Write file
-    XLSX.writeFile(wb, fileName);
-    
-    setDownloadDialogOpen(false);
-    toast.success(`Xatoliklar hisoboti yuklandi (${downloadFormat})`);
+        // Generate file name with timestamp
+        const date = new Date().toISOString().split('T')[0];
+        const fileName = `upload_errors_${date}.${downloadFormat}`;
+
+        // Write file
+        XLSX.writeFile(wb, fileName);
+        
+        setDownloadDialogOpen(false);
+        toast.success(`Xatoliklar hisoboti yuklandi (${downloadFormat})`);
+    } catch (error) {
+        console.error("Export error:", error);
+        toast.error("Faylni yuklashda xatolik yuz berdi.");
+    }
   };
+
+  // Limit displayed rows
+  const displayedErrors = result?.failedRows.slice(0, 50); // Show first 50
+  const remainingErrors = (result?.failedRows.length || 0) - (displayedErrors?.length || 0);
 
   return (
     <>
@@ -292,11 +304,11 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
               </Box>
 
               <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
-                Xatoliklar tafsiloti:
+                Xatoliklar tafsiloti (Birinchi 50 ta):
               </Typography>
               <Box sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                 <List dense>
-                  {result.failedRows.map((fail, index) => (
+                  {displayedErrors?.map((fail, index) => (
                     <React.Fragment key={index}>
                       <ListItem alignItems="flex-start">
                         <ListItemText
@@ -312,9 +324,20 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
                           }
                         />
                       </ListItem>
-                      {index < result.failedRows.length - 1 && <Divider component="li" />}
+                      <Divider component="li" />
                     </React.Fragment>
                   ))}
+                  {remainingErrors > 0 && (
+                     <ListItem>
+                        <ListItemText 
+                            primary={
+                                <Typography variant="body2" color="text.secondary" align="center">
+                                    Va yana {remainingErrors} ta xatolik... Barchasini ko'rish uchun faylni yuklab oling.
+                                </Typography>
+                            }
+                        />
+                     </ListItem>
+                  )}
                 </List>
               </Box>
             </Box>
@@ -386,7 +409,7 @@ const BulkBookUploadModal: React.FC<BulkBookUploadModalProps> = ({ open, onClose
             <RadioGroup
               row
               value={downloadFormat}
-              onChange={(e) => setDownloadFormat(e.target.value as any)}
+              onChange={(e) => setDownloadFormat(e.target.value as 'xlsx' | 'xls' | 'csv')} // Copilot: Fixed cast
             >
               <FormControlLabel value="xlsx" control={<Radio />} label="Excel (.xlsx)" />
               <FormControlLabel value="xls" control={<Radio />} label=".xls" />

@@ -475,7 +475,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
 
   // 3. Barcha shtrix-kodlarni yig'ib olish (dublikatlarni tekshirish uchun)
   const allBarcodesInFile = new Set<string>();
-  const duplicateBarcodesInFile = new Set<string>();
+  // const duplicateBarcodesInFile = new Set<string>(); // Copilot: Unused, removed
 
   // Validatsiya qilingan va guruhlangan ma'lumotlar
   // Key: Title + Author (normalized) -> Value: { title, author, category, barcodes: [] }
@@ -513,7 +513,7 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
 
     // Fayl ichidagi dublikat barcode
     if (allBarcodesInFile.has(barcode)) {
-      duplicateBarcodesInFile.add(barcode);
+      // duplicateBarcodesInFile.add(barcode); // Removed
       results.failedRows.push({
         row: originalRowIndex,
         data: row,
@@ -534,6 +534,17 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
         category,
         barcodes: [],
       });
+    } else {
+      // Copilot suggestion: Category conflict detection
+      const existing = booksMap.get(key)!;
+      if (existing.category.toLowerCase() !== category.toLowerCase()) {
+         results.failedRows.push({
+          row: originalRowIndex,
+          data: row,
+          reason: `Bir xil Title/Author ("${title}") uchun turli Category topildi: "${existing.category}" va "${category}".`,
+        });
+        continue;
+      }
     }
     booksMap.get(key)!.barcodes.push(barcode);
   }
@@ -576,10 +587,11 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
   const allCategories = await prisma.category.findMany();
   const categoryMap = new Map(allCategories.map((c) => [c.name.toLowerCase(), c.id]));
   let newCategoriesCreated = false;
+  const bookIdsToInvalidate = new Set<string>();
 
   // 6. Kitoblarni yaratish yoki yangilash
-  // Har bir guruh (kitob) uchun
-  for (const [key, bookData] of booksMap) {
+  // Har bir guruh (kitob) uchun. Copilot: Use booksMap.values() to avoid unused key
+  for (const bookData of booksMap.values()) {
     try {
       await prisma.$transaction(async (tx) => {
         // 6a. Kategoriya
@@ -638,8 +650,8 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
            });
            results.createdCopies += bookData.barcodes.length;
            
-           // Keshni tozalash
-           await redisClient.del(`book:${bookId}`);
+           // Keshni tozalash uchun ID ni saqlaymiz (Transaction ichida Redis chaqirmaymiz)
+           bookIdsToInvalidate.add(bookId);
         }
       });
     } catch (error: any) {
@@ -652,12 +664,40 @@ export const bulkCreateBooks = async (fileBuffer: Buffer) => {
   }
 
   // 7. Yakuniy tozalash va xabarlar
+  
+  // Redis keshini tozalash (Transactiondan tashqarida)
   if (newCategoriesCreated) {
     await redisClient.del('categories:all');
   }
+  for (const bid of bookIdsToInvalidate) {
+    await redisClient.del(`book:${bid}`);
+  }
+
+  // Copilot: Restore notifications
+  if (results.createdBooks > 0) {
+    const usersToNotify = await prisma.user.findMany({
+      where: { role: 'USER' },
+      select: { id: true },
+    });
+
+    if (usersToNotify.length > 0) {
+      const notificationData = usersToNotify.map((user) => ({
+        userId: user.id,
+        message: `Kutubxonaga ${results.createdBooks} ta yangi nomdagi kitob (${results.createdCopies} ta nusxada) qo'shildi! Katalog bilan tanishing.`,
+        type: NotificationType.INFO,
+      }));
+
+      // await prisma.notification.createMany({ data: notificationData }); // Optimize or batch if too large
+      // Notificationlar juda ko'p bo'lsa, sekin ishlashi mumkin, lekin hozircha eski mantiqni qaytaramiz:
+      await prisma.notification.createMany({ data: notificationData });
+
+      const io = getIo();
+      io.to(usersToNotify.map((u) => u.id)).emit('refetch_notifications');
+    }
+  }
 
   return {
-    message: `Jarayon yakunlandi.`,
+    message: `Jarayon yakunlandi. Yaratilgan kitoblar: ${results.createdBooks} ta, nusxalar: ${results.createdCopies} ta, muvaffaqiyatsiz qatorlar: ${results.failedRows.length} ta.`,
     stats: {
       createdBooks: results.createdBooks,
       createdCopies: results.createdCopies,
