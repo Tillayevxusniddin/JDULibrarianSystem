@@ -434,155 +434,235 @@ export const findCommentsByBookId = async (bookId: string) => {
 // #####################################################################
 
 /**
- * Excel fayli orqali kitoblar va ularning nusxalarini ommaviy qo'shadi.
- * Excelda "barcodes" degan ustun bo'lishi va unda shtrix-kodlar vergul bilan ajratilishi kerak.
+ * Excel/CSV fayli orqali kitoblar va ularning nusxalarini ommaviy qo'shadi.
+ * Format: Barcode, Title, Author, Category
  */
 export const bulkCreateBooks = async (fileBuffer: Buffer) => {
-  // 1. Excel faylni o'qish va JSON formatiga o'tkazish
+  // 1. Faylni o'qish (Headerga qaramasdan, array of arrays)
   const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
-  const booksJson = xlsx.utils.sheet_to_json(worksheet) as any[];
+  // header: 1 -> har bir qator array bo'ladi
+  const rawData = xlsx.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-  if (!booksJson || booksJson.length === 0) {
-    throw new ApiError(400, "Excel fayli bo'sh yoki noto'g'ri formatda.");
+  if (!rawData || rawData.length === 0) {
+    throw new ApiError(400, "Excel fayli bo'sh.");
   }
 
-  // 2. Mavjud kategoriyalarni olib, tezkor qidiruv uchun Mapga joylash
+  // 2. Qatorlarni tozalash va formatlash
+  // Header bor-yo'qligini aniqlash. Agar 1-qator "Barcode" yoki "Title" kabi so'zlarni o'z ichiga olsa, uni tashlab yuboramiz.
+  // Lekin sample faylda header yo'q ("IT-1", ...).
+  // Shuning uchun, oddiy qoida: agar 1-ustun "Barcode" ga o'xshasa (header nomi sifatida), skip qilamiz.
+  let startIndex = 0;
+  if (
+    rawData[0][0] &&
+    typeof rawData[0][0] === 'string' &&
+    ['barcode', 'code', 'id', 'shtrix'].some((s) =>
+      rawData[0][0].toLowerCase().includes(s),
+    )
+  ) {
+    startIndex = 1;
+  }
+
+  const rowsToProcess = rawData.slice(startIndex).filter((row) => row.length > 0);
+
+  // Natijalar
+  const results = {
+    createdBooks: 0,
+    createdCopies: 0,
+    failedRows: [] as any[],
+  };
+
+  // 3. Barcha shtrix-kodlarni yig'ib olish (dublikatlarni tekshirish uchun)
+  const allBarcodesInFile = new Set<string>();
+  const duplicateBarcodesInFile = new Set<string>();
+
+  // Validatsiya qilingan va guruhlangan ma'lumotlar
+  // Key: Title + Author (normalized) -> Value: { title, author, category, barcodes: [] }
+  const booksMap = new Map<
+    string,
+    { title: string; author: string | null; category: string; barcodes: string[] }
+  >();
+
+  // 3a. Fayl ichidagi validatsiya va guruhlash
+  for (let i = 0; i < rowsToProcess.length; i++) {
+    const row = rowsToProcess[i];
+    const originalRowIndex = startIndex + i + 1; // Foydalanuvchi uchun qator raqami
+
+    // Sample mapping:
+    // 0: Barcode (Required)
+    // 1: Title (Required)
+    // 2: Author (Optional)
+    // 3: Category (Required)
+    // 4: Language (Ignored)
+
+    const barcode = row[0] ? String(row[0]).trim() : null;
+    const title = row[1] ? String(row[1]).trim() : null;
+    const author = row[2] ? String(row[2]).trim() : null;
+    const category = row[3] ? String(row[3]).trim() : null;
+
+    // Asosiy validatsiya
+    if (!barcode || !title || !category) {
+      results.failedRows.push({
+        row: originalRowIndex,
+        data: row,
+        reason: "Barcode, Title yoki Category yetishmayapti.",
+      });
+      continue;
+    }
+
+    // Fayl ichidagi dublikat barcode
+    if (allBarcodesInFile.has(barcode)) {
+      duplicateBarcodesInFile.add(barcode);
+      results.failedRows.push({
+        row: originalRowIndex,
+        data: row,
+        reason: `Fayl ichida takrorlangan shtrix-kod: ${barcode}`,
+      });
+      continue;
+    }
+    allBarcodesInFile.add(barcode);
+
+    // Guruhlash
+    // "Title|Author" - kalit
+    const key = `${title.toLowerCase()}|${(author || '').toLowerCase()}`;
+    
+    if (!booksMap.has(key)) {
+      booksMap.set(key, {
+        title,
+        author,
+        category,
+        barcodes: [],
+      });
+    }
+    booksMap.get(key)!.barcodes.push(barcode);
+  }
+
+  // 4. Bazadagi mavjud shtrix-kodlarni tekshirish
+  if (allBarcodesInFile.size > 0) {
+    const existingCopies = await prisma.bookCopy.findMany({
+      where: {
+        barcode: { in: Array.from(allBarcodesInFile) },
+      },
+      select: { barcode: true },
+    });
+
+    const existingBarcodeSet = new Set(existingCopies.map((c) => c.barcode));
+
+    // Endi booksMap ichidan mavjud barcodelarni olib tashlaymiz
+    for (const [key, bookData] of booksMap) {
+      const validBarcodes: string[] = [];
+      for (const bc of bookData.barcodes) {
+        if (existingBarcodeSet.has(bc)) {
+          results.failedRows.push({
+             row: 'N/A', // Guruhlangan, aniq qatorni topish qiyinroq, lekin umumiy xato
+             data: [bc, bookData.title],
+             reason: `Shtrix-kod bazada allaqachon mavjud: ${bc}`
+          });
+        } else {
+          validBarcodes.push(bc);
+        }
+      }
+      bookData.barcodes = validBarcodes;
+      
+      // Agar barcha nusxalar invalid bo'lsa, bu kitobni mapdan o'chiramiz
+      if (validBarcodes.length === 0) {
+        booksMap.delete(key);
+      }
+    }
+  }
+
+  // 5. Kategoriyalarni tayyorlash
   const allCategories = await prisma.category.findMany();
-  const categoryMap = new Map(
-    allCategories.map((cat) => [cat.name.toLowerCase(), cat.id]),
-  );
-  const CATEGORIES_CACHE_KEY = 'categories:all';
+  const categoryMap = new Map(allCategories.map((c) => [c.name.toLowerCase(), c.id]));
   let newCategoriesCreated = false;
 
-  // 3. Muvaffaqiyatli qo'shilgan yozuvlarni sanash uchun hisoblagichlar
-  let createdBooksCount = 0;
-  let createdCopiesCount = 0;
-
-  // 4. Exceldagi har bir qator bo'yicha birma-bir ishlash
-  for (const [index, row] of booksJson.entries()) {
-    // Har bir qatorni alohida tranzaksiyada bajaramiz.
-    // Bu agar bitta qatorda xatolik bo'lsa, faqat o'sha qator o'zgarishlari bekor bo'lishini ta'minlaydi.
+  // 6. Kitoblarni yaratish yoki yangilash
+  // Har bir guruh (kitob) uchun
+  for (const [key, bookData] of booksMap) {
     try {
       await prisma.$transaction(async (tx) => {
-        // 4a. Majburiy maydonlarni tekshirish
-        if (!row.title || !row.category || !row.barcodes) {
-          throw new Error(
-            `Excelning ${
-              index + 2
-            }-qatorida 'title', 'category' yoki 'barcodes' ustunlari to'ldirilmagan.`,
-          );
-        }
-
-        // 4b. Kategoriyani topish yoki yangisini yaratish
-        const categoryName = String(row.category).trim();
-        let categoryId = categoryMap.get(categoryName.toLowerCase());
+        // 6a. Kategoriya
+        let categoryId = categoryMap.get(bookData.category.toLowerCase());
         if (!categoryId) {
-          const newCategory = await tx.category.create({
+          const newCat = await tx.category.create({
             data: {
-              name: categoryName,
-              description: 'Excel orqali avtomatik yaratilgan',
+              name: bookData.category,
+              description: 'Ommaviy yuklash orqali yaratilgan',
             },
           });
-          categoryId = newCategory.id;
-          categoryMap.set(categoryName.toLowerCase(), newCategory.id);
+          categoryId = newCat.id;
+          categoryMap.set(bookData.category.toLowerCase(), categoryId);
           newCategoriesCreated = true;
         }
 
-        // 4c. Kitob "pasporti" ma'lumotlarini tayyorlash
-        const bookData = {
-          title: String(row.title),
-          author: row.author ? String(row.author) : null,
-          description: row.description ? String(row.description) : null,
-          publisher: row.publisher ? String(row.publisher) : null,
-          publishedYear: row.publishedYear ? Number(row.publishedYear) : null,
-          pageCount: row.pageCount ? Number(row.pageCount) : null,
-          coverImage: null,
-          categoryId: categoryId,
+        // 6b. Kitob mavjudligini tekshirish (Title + Author)
+        let bookId: string;
+        
+        // Izlash kriteriyasi
+        const searchCriteria: Prisma.BookWhereInput = {
+          title: { equals: bookData.title, mode: 'insensitive' },
         };
-
-        // 4d. Kitob "pasportini" yaratish
-        const newBook = await tx.book.create({ data: bookData });
-
-        // 4e. Shtrix-kodlarni ajratib olish va dublikatlarni tekshirish
-        const barcodes = String(row.barcodes)
-          .split(',')
-          .map((bc) => bc.trim())
-          .filter(Boolean);
-        if (barcodes.length === 0) {
-          throw new Error(
-            `"${row.title}" kitobi uchun (${
-              index + 2
-            }-qator) shtrix-kodlar kiritilmagan.`,
-          );
-        }
-        const existingBarcodes = await tx.bookCopy.findMany({
-          where: { barcode: { in: barcodes } },
-        });
-        if (existingBarcodes.length > 0) {
-          throw new Error(
-            `Quyidagi shtrix-kodlar allaqachon mavjud: ${existingBarcodes
-              .map((bc) => bc.barcode)
-              .join(', ')}`,
-          );
+        if (bookData.author) {
+            searchCriteria.author = { equals: bookData.author, mode: 'insensitive' };
         }
 
-        // 4f. Jismoniy nusxalarni yaratish
-        const createdCopiesResult = await tx.bookCopy.createMany({
-          data: barcodes.map((barcode) => ({
-            bookId: newBook.id,
-            barcode: barcode,
-          })),
+        const existingBook = await tx.book.findFirst({
+          where: searchCriteria,
         });
 
-        // 4g. Hisoblagichlarni yangilash
-        createdBooksCount++;
-        createdCopiesCount += createdCopiesResult.count;
+        if (existingBook) {
+          bookId = existingBook.id;
+        } else {
+          // Yangi kitob yaratish
+          const newBook = await tx.book.create({
+            data: {
+              title: bookData.title,
+              author: bookData.author,
+              categoryId: categoryId,
+              // Boshqa maydonlar bo'sh qoladi
+            },
+          });
+          bookId = newBook.id;
+          results.createdBooks++;
+        }
+
+        // 6c. Nusxalarni qo'shish
+        if (bookData.barcodes.length > 0) {
+           await tx.bookCopy.createMany({
+             data: bookData.barcodes.map(bc => ({
+               bookId,
+               barcode: bc,
+               status: 'AVAILABLE'
+             }))
+           });
+           results.createdCopies += bookData.barcodes.length;
+           
+           // Keshni tozalash
+           await redisClient.del(`book:${bookId}`);
+        }
       });
     } catch (error: any) {
-      // Agar biror qatorda xatolik bo'lsa, butun jarayonni to'xtatib, tushunarli xabar beramiz
-      throw new ApiError(
-        400,
-        error.message ||
-          `Excel faylning ${index + 2}-qatorida xatolik yuz berdi.`,
-      );
+      results.failedRows.push({
+        row: 'Group',
+        data: [bookData.title, bookData.author],
+        reason: `Saqlashda xatolik: ${error.message}`,
+      });
     }
   }
 
-  // 5. Agar yangi kategoriya yaratilgan bo'lsa, keshni tozalash
+  // 7. Yakuniy tozalash va xabarlar
   if (newCategoriesCreated) {
-    await redisClient.del(CATEGORIES_CACHE_KEY);
-    console.log(
-      'Categories cache invalidated due to new categories from bulk import.',
-    );
+    await redisClient.del('categories:all');
   }
 
-  // 6. Ommaviy bildirishnoma yuborish
-  if (createdBooksCount > 0) {
-    const usersToNotify = await prisma.user.findMany({
-      where: { role: 'USER' },
-      select: { id: true },
-    });
-
-    if (usersToNotify.length > 0) {
-      const notificationData = usersToNotify.map((user) => ({
-        userId: user.id,
-        message: `Kutubxonaga ${createdBooksCount} ta yangi nomdagi kitob (${createdCopiesCount} ta nusxada) qo'shildi! Katalog bilan tanishing.`,
-        type: NotificationType.INFO,
-      }));
-
-      await prisma.notification.createMany({ data: notificationData });
-
-      const io = getIo();
-      io.to(usersToNotify.map((u) => u.id)).emit('refetch_notifications');
-    }
-  }
-
-  // 7. Yakuniy natijani qaytarish
   return {
-    message: `${createdBooksCount} ta kitob nomi va ${createdCopiesCount} ta nusxa muvaffaqiyatli qo'shildi.`,
-    createdBooks: createdBooksCount,
-    createdCopies: createdCopiesCount,
+    message: `Jarayon yakunlandi.`,
+    stats: {
+      createdBooks: results.createdBooks,
+      createdCopies: results.createdCopies,
+      failedCount: results.failedRows.length,
+    },
+    failedRows: results.failedRows,
   };
 };

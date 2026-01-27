@@ -12,12 +12,23 @@ const fileFilter = (
   const allowedMimeTypes = [
     'application/vnd.ms-excel', // .xls
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'text/csv',
+    'application/csv',
+    'text/x-csv',
+    'application/x-csv',
+    'text/comma-separated-values',
+    'text/x-comma-separated-values',
+    'application/vnd.ms-excel', // Some systems report CSV as this
   ];
-  if (allowedMimeTypes.includes(file.mimetype)) {
+
+  // Also check file extension as a fallback because some clients send generic binary/octet-stream types
+  const isCsvOrExcelExtension = file.originalname.match(/\.(xls|xlsx|csv)$/i);
+
+  if (allowedMimeTypes.includes(file.mimetype) || isCsvOrExcelExtension) {
     cb(null, true);
   } else {
     cb(
-      new ApiError(400, 'Faqat Excel fayllarini yuklash mumkin (.xls, .xlsx)'),
+      new ApiError(400, 'Faqat Excel yoki CSV fayllarini yuklash mumkin (.xls, .xlsx, .csv)'),
     );
   }
 };
