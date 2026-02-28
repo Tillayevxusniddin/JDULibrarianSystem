@@ -138,7 +138,7 @@ const BookDetailPage: React.FC = () => {
   const handleDeleteClick = () => {
     if (!selectedCopy) return;
     setDeleteConfirmOpen(true);
-    handleMenuClose();
+    setAnchorEl(null);
   };
 
   const handleConfirmDeleteCopy = async () => {
