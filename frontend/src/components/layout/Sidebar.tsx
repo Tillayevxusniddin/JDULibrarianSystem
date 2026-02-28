@@ -32,6 +32,7 @@ import SchoolIcon from "@mui/icons-material/School";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 import { useAuthStore } from "../../store/auth.store";
 import { useNotificationStore } from "../../store/notification.store";
@@ -149,6 +150,12 @@ const adminNavItems = [
     icon: <ReportProblemIcon />,
     path: "/manual-fines",
     role: ["LIBRARIAN"],
+  },
+  {
+    text: "Sozlamalar",
+    icon: <SettingsIcon />,
+    path: "/settings",
+    role: ["LIBRARIAN", "MANAGER"],
   },
   {
     text: "Foydalanuvchilar",

@@ -56,6 +56,13 @@ enum ReservationStatus {
   CANCELLED // Bekor qilingan
 }
 
+enum FineIntervalUnit {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
 // --- MODELLAR ---
 
 model User {
@@ -232,7 +239,7 @@ model Loan {
   bookCopyId String // Qaysi aniq nusxa ijaraga olingani
   bookCopy   BookCopy @relation(fields: [bookCopyId], references: [id])
 
-  fine Fine?
+  fines Fine[] // Changed from Fine? to Fine[] to support multiple fines
 
   @@map("loans")
 }
@@ -258,18 +265,20 @@ model Reservation {
 }
 
 model Fine {
-  id        String    @id @default(uuid())
-  amount    Decimal   @db.Decimal(10, 2)
-  reason    String
-  isPaid    Boolean   @default(false)
-  paidAt    DateTime?
-  loanId    String?   @unique
-  loan      Loan?     @relation(fields: [loanId], references: [id])
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  amount       Decimal   @db.Decimal(10, 2)
+  reason       String
+  isPaid       Boolean   @default(false)
+  paidAt       DateTime?
+  finedForDate DateTime  @default(now()) // Represents the period start or day being fined
+  loanId       String?
+  loan         Loan?     @relation(fields: [loanId], references: [id])
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
+  @@unique([loanId, finedForDate])
   @@map("fines")
 }
 
@@ -310,4 +319,16 @@ model Notification {
   link      String?
 
   @@map("notifications")
+}
+
+model LibrarySettings {
+  id                String            @id @default(uuid())
+  enableFines       Boolean           @default(true)
+  fineAmountPerDay  Decimal           @default(5000) @db.Decimal(10, 2)
+  fineIntervalUnit  FineIntervalUnit  @default(DAILY)
+  fineIntervalDays  Int?              // Required only when fineIntervalUnit is CUSTOM
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("library_settings")
 }

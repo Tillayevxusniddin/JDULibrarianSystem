@@ -37,6 +37,7 @@ import commentRouter from './api/comment/comment.route.js';
 import reactionRouter from './api/reaction/reaction.route.js';
 import feedRouter from './api/feed/feed.route.js';
 import kintoneRouter from './api/kintone/kintone.route.js';
+import settingsRouter from './api/settings/settings.route.js';
 
 // === Environment ===
 dotenv.config();
@@ -77,6 +78,7 @@ app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/reactions', reactionRouter);
 app.use('/api/v1/feed', feedRouter);
 app.use('/api/v1/kintone', kintoneRouter);
+app.use('/api/v1/settings', settingsRouter);
 
 // Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
