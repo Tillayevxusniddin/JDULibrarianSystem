@@ -110,6 +110,7 @@ export interface Loan {
     id: string;
     firstName: string;
     lastName: string;
+    email?: string;
   };
 }
 
