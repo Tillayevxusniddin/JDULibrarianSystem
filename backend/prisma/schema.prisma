@@ -85,6 +85,7 @@ model User {
   suggestions   BookSuggestion[]
   notifications Notification[]
   fines         Fine[]
+  favorites     Favorite[]
 
   @@map("users")
 }
@@ -194,6 +195,7 @@ model Book {
   copies       BookCopy[] // Bu kitobning barcha jismoniy nusxalari
   comments     BookComment[]
   reservations Reservation[]
+  favorites    Favorite[]
 
   @@index([title, author])
   @@map("books")
@@ -310,4 +312,16 @@ model Notification {
   link      String?
 
   @@map("notifications")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@map("favorites")
 }
