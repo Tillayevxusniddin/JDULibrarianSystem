@@ -366,6 +366,9 @@ const AllLoansPage: React.FC = () => {
                       }}
                     >
                       {loan.bookCopy.book.title}
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        {loan.bookCopy.barcode}
+                      </Typography>
                     </TableCell>
                     <TableCell
                       data-label="Foydalanuvchi"
@@ -375,6 +378,11 @@ const AllLoansPage: React.FC = () => {
                       }}
                     >
                       {loan.user.firstName} {loan.user.lastName}
+                      {loan.user.email && (
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {loan.user.email}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell
                       data-label="Qaytarish Muddati"
