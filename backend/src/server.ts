@@ -46,8 +46,8 @@ const app: Application = express();
 // ✅ O'zgartirilgan joy: allowedOrigins massivni qoldirib, soddalashtirdik
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://d1i0w0wleowwc9.cloudfront.net', // CloudFront domeningiz
-  'https://library.manabi.uz', // Rasmiy domeningiz
+  'https://d1bw0wleowwca9.cloudfront.net',
+  'https://library.jdu.uz',
 ];
 
 // ✅ O'zgartirilgan joy: CORS opsiyalarini soddalashtirdik

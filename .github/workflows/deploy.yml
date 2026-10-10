@@ -64,8 +64,8 @@ jobs:
 
       - name: Qurish
         env:
-          VITE_API_URL: https://api.library.manabi.uz/api/v1
-          VITE_SOCKET_URL: https://api.library.manabi.uz
+          VITE_API_URL: https://api.library.jdu.uz/api/v1
+          VITE_SOCKET_URL: https://api.library.jdu.uz
         run: npm run build
 
       - name: AWS hisob ma'lumotlarini sozlash
