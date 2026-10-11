@@ -23,6 +23,7 @@ import ProfilePage from '../pages/ProfilePage';
 import MyFinesPage from '../pages/MyFinesPage';
 import ManualFinesPage from '../pages/librarian/ManualFinesPage';
 import ManagerPage from '../pages/manager/ManagerPage';
+import SettingsPage from '../pages/librarian/SettingsPage';
 import PremiumRoute from './PremiumRoute';
 import MyChannelPage from '../pages/MyChannelPage';
 import PremiumPage from '../pages/PremiumPage';
@@ -118,6 +119,11 @@ const router = createBrowserRouter([
         path: '/manual-fines',
         element: <LibrarianRoute />,
         children: [{ path: '', element: <ManualFinesPage /> }],
+      },
+      {
+        path: '/settings',
+        element: <LibrarianRoute />,
+        children: [{ path: '', element: <SettingsPage /> }],
       },
       {
         path: '/my-fines',
